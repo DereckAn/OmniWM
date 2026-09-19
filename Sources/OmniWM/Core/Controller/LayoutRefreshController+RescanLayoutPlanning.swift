@@ -79,7 +79,13 @@ extension LayoutRefreshController {
         } else {
             Set<WorkspaceDescriptor.ID>()
         }
-        let layoutWorkspaceIds = scanLayoutWorkspaceIds.union(explicitRelayoutWorkspaceIds)
+        var layoutWorkspaceIds = scanLayoutWorkspaceIds.union(explicitRelayoutWorkspaceIds)
+        if case .all = scope, !layoutState.hasCompletedInitialRefresh {
+            let occupiedWorkspaceIds = Set(controller.workspaceManager.allEntries().lazy
+                .filter { $0.mode == .tiling }
+                .map(\.workspaceId))
+            layoutWorkspaceIds.formUnion(liveLayoutWorkspaceIds(occupiedWorkspaceIds, controller: controller))
+        }
         return layoutWorkspaceIds
     }
 

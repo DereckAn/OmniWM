@@ -30,7 +30,7 @@ final class OverviewDragCaptureIntegrationTests: XCTestCase {
         try await publish(replacement, in: fixture)
 
         XCTAssertTrue(ghost.preview === replacement)
-        XCTAssertTrue(fixture.capture.previewCache[handle] === replacement)
+        XCTAssertTrue(fixture.capture.preview(for: handle) === replacement)
         XCTAssertEqual(fixture.captureStarts.count, 1)
 
         fixture.overview.drag.cancelDrag()
@@ -65,7 +65,7 @@ final class OverviewDragCaptureIntegrationTests: XCTestCase {
         XCTAssertNil(ghost.preview)
         XCTAssertFalse(ghost.isVisible)
         XCTAssertTrue(fixture.registry.visibleWindows(kind: .dragGhost).isEmpty)
-        XCTAssertNil(fixture.capture.previewCache[handle])
+        XCTAssertNil(fixture.capture.preview(for: handle))
         fixture.driver.streams[0].output.offer(try makeOverviewPreviewFrame())
         XCTAssertNil(fixture.driver.streams[0].output.take())
         XCTAssertNil(ghost.preview)
@@ -83,7 +83,7 @@ final class OverviewDragCaptureIntegrationTests: XCTestCase {
         try await publish(previous, in: fixture)
         fixture.overview.dismiss(animated: false)
         await fixture.driver.waitForStops(1)
-        XCTAssertTrue(fixture.capture.previewCache[handle] === previous)
+        XCTAssertTrue(fixture.capture.preview(for: handle) === previous)
 
         fixture.overview.open()
 
@@ -108,7 +108,7 @@ final class OverviewDragCaptureIntegrationTests: XCTestCase {
 
     private func overviewCard(for handle: WindowHandle, in fixture: Fixture) -> OverviewWindowLayer? {
         fixture.registry.visibleWindows(kind: .overview)
-            .compactMap { ($0 as? OverviewWindow)?.contentView as? OverviewView }
+            .compactMap { ($0 as? OverviewWindow)?.contentView?.subviews.compactMap { $0 as? OverviewView }.first }
             .compactMap { $0.layerRenderer.windowLayers[handle] }
             .first
     }

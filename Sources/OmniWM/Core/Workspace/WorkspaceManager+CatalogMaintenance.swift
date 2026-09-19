@@ -8,12 +8,13 @@ import QuartzCore
 extension WorkspaceManager {
     func garbageCollectUnusedWorkspaces(focusedWorkspaceId: WorkspaceDescriptor.ID?) {
         let configured = configuredWorkspaceNameSet()
+        let visible = visibleWorkspaceIds()
         var toRemove: [WorkspaceDescriptor.ID] = []
         for (id, workspace) in workspaceCatalog.descriptors {
             if configured.contains(workspace.name) {
                 continue
             }
-            if focusedWorkspaceId == id {
+            if focusedWorkspaceId == id || visible.contains(id) {
                 continue
             }
             if !windowQueries.windows(in: id).isEmpty {

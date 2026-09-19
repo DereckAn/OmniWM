@@ -74,8 +74,8 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         }
         driver.streams[0].output.offer(frame)
         await fulfillment(of: [published], timeout: 1)
-        XCTAssertTrue(capture.previewCache[first] === frame)
-        XCTAssertNil(capture.previewCache[second])
+        XCTAssertTrue(capture.preview(for: first) === frame)
+        XCTAssertNil(capture.preview(for: second))
         capture.clear()
         driver.completeAllStarts()
         await driver.waitForStops(2)
@@ -124,7 +124,7 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         await driver.waitForStarts(6)
         await driver.waitForStops(5)
         XCTAssertEqual(driver.streams.filter { $0.stopCount == 1 }.count, 5)
-        XCTAssertTrue(capture.previewCache.isEmpty)
+        XCTAssertEqual(capture.cachedByteCount, 0)
         driver.completeAllStarts()
         capture.clear()
     }
@@ -145,9 +145,9 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         await fulfillment(of: [published], timeout: 1)
         driver.completeAllStarts()
         capture.reconcile(represented: [handle], visible: [])
-        XCTAssertTrue(capture.previewCache[handle] === frame)
+        XCTAssertTrue(capture.preview(for: handle) === frame)
         capture.reconcile(represented: [], visible: [])
-        XCTAssertNil(capture.previewCache[handle])
+        XCTAssertNil(capture.preview(for: handle))
     }
 
     @MainActor
@@ -170,18 +170,18 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         await fulfillment(of: [published], timeout: 1)
 
         capture.releaseCache()
-        XCTAssertTrue(capture.previewCache[handle] === frame, "Pressure must not blank a card with a live source")
+        XCTAssertTrue(capture.preview(for: handle) === frame, "Pressure must not blank a card with a live source")
         capture.clear()
         await driver.waitForStops(1)
-        XCTAssertTrue(capture.previewCache[handle] === frame)
+        XCTAssertTrue(capture.preview(for: handle) === frame)
         XCTAssertTrue(clearedHandles.isEmpty)
 
         capture.reconcile(represented: [handle], visible: [request])
         await driver.waitForStarts(2)
-        XCTAssertTrue(capture.previewCache[handle] === frame)
+        XCTAssertTrue(capture.preview(for: handle) === frame)
         capture.clear()
         capture.reconcile(represented: [], visible: [])
-        XCTAssertNil(capture.previewCache[handle])
+        XCTAssertNil(capture.preview(for: handle))
         XCTAssertEqual(clearedHandles.map(\.id), [handle.id])
 
         capture.reconcile(represented: [handle], visible: [request])
@@ -197,7 +197,7 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         await fulfillment(of: [republished], timeout: 1)
         capture.clear()
         capture.releaseCache()
-        XCTAssertTrue(capture.previewCache.isEmpty)
+        XCTAssertEqual(capture.cachedByteCount, 0)
         XCTAssertEqual(clearedHandles.count, 2)
     }
 
@@ -254,7 +254,7 @@ final class OverviewPreviewCaptureTests: XCTestCase {
         driver.completeAllStarts()
         await driver.waitForStarts(2)
         await driver.waitForStops(1)
-        XCTAssertTrue(capture.previewCache.isEmpty)
+        XCTAssertEqual(capture.cachedByteCount, 0)
         XCTAssertEqual(driver.streams[0].stopCount, 1)
         driver.streams[0].output.offer(frame)
         XCTAssertNil(driver.streams[0].output.take())

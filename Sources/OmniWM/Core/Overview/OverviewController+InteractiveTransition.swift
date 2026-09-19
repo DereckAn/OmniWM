@@ -1,9 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (C) 2026 BarutSRB — https://github.com/OmniNull/OmniWM
 
+import CoreGraphics
 import Foundation
 
 extension OverviewController {
+    func installAnimation(
+        _ transition: OverviewNativeTransition,
+        on displayId: CGDirectDisplayID,
+        completion: OverviewAnimationCompletion
+    ) -> Bool {
+        windowSession.installAnimation(transition, on: displayId, completion: completion)
+    }
+
+    func cancelAnimations() {
+        windowSession.cancelAnimations()
+    }
+
     func activateForInteraction() {
         activateOwnedSession()
         windowSession.primaryOverviewWindow()?.show(asKeyWindow: true)
@@ -84,6 +97,7 @@ extension OverviewController {
             return
         }
         if target == 1 {
+            windowSession.updateWindowDisplays(state: state)
             commitOpen()
         } else {
             dismiss(

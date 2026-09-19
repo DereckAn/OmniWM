@@ -6,7 +6,7 @@ import Foundation
 struct OverviewSearchFilter {
     static func firstMatchingWindow(in layout: OverviewLayout) -> OverviewWindowItem? {
         for section in layout.workspaceSections {
-            for window in section.windows where window.matchesSearch {
+            for window in section.windows where window.matchesSearch && window.isDisplayed {
                 return window
             }
         }

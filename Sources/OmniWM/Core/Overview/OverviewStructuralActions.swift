@@ -22,7 +22,8 @@ final class OverviewStructuralActions {
         selectedHandle: WindowHandle
     ) -> StructuralMutationOutcome? {
         guard let wmController,
-              let entry = windowFacts.visibleManagedEntry(for: selectedHandle)
+              let entry = windowFacts.visibleManagedEntry(for: selectedHandle),
+              windowFacts.isStructurallyMutable(entry)
         else {
             return .unchanged
         }

@@ -6,19 +6,27 @@ import Foundation
 
 extension WindowActionHandler {
     @discardableResult
-    func navigateToWindowInternal(token: WindowToken, workspaceId: WorkspaceDescriptor.ID) -> Bool {
+    func navigateToWindowInternal(
+        token: WindowToken,
+        workspaceId: WorkspaceDescriptor.ID,
+        affectedWorkspaces: Set<WorkspaceDescriptor.ID> = []
+    ) -> Bool {
         guard let controller,
               let handle = prepareWindowNavigation(token: token, workspaceId: workspaceId)
         else {
             return false
         }
-        commitWindowNavigation(handle: handle, workspaceId: workspaceId, controller: controller)
+        commitWindowNavigation(
+            handle: handle, workspaceId: workspaceId,
+            affectedWorkspaces: affectedWorkspaces, controller: controller
+        )
         return true
     }
 
     func prepareOverviewSelection(handle: WindowHandle, workspaceId: WorkspaceDescriptor.ID) {
         guard let controller else { return }
         let workspaceManager = controller.workspaceManager
+        guard workspaceManager.entry(for: handle)?.layoutReason == .standard else { return }
         let previousWorkspaceId = workspaceManager.monitorForWorkspace(workspaceId)
             .flatMap { workspaceManager.activeWorkspace(on: $0.id)?.id }
         guard prepareWindowNavigation(token: handle.id, workspaceId: workspaceId, settlesMotion: true) != nil else {
@@ -134,7 +142,10 @@ extension WindowActionHandler {
     }
 
     private func commitWindowNavigation(
-        handle: WindowHandle, workspaceId: WorkspaceDescriptor.ID, controller: WMController
+        handle: WindowHandle,
+        workspaceId: WorkspaceDescriptor.ID,
+        affectedWorkspaces: Set<WorkspaceDescriptor.ID>,
+        controller: WMController
     ) {
         let newestFocusIntentId = controller.intentLedger.newestFocusIntentId()
         let focusTarget: LayoutRefreshController.PostLayoutAction = { [weak controller] in
@@ -156,6 +167,7 @@ extension WindowActionHandler {
             focusTarget()
         }
         controller.layoutRefreshController.commitWorkspaceTransition(
+            affectedWorkspaces: affectedWorkspaces,
             reason: .workspaceTransition,
             postLayoutGateWorkspaceIds: [workspaceId],
             postLayout: focusTarget,

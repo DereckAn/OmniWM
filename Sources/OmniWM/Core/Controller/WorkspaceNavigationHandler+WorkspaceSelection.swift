@@ -19,7 +19,10 @@ extension WorkspaceNavigationHandler {
     }
 
     @discardableResult
-    func switchWorkspace(rawWorkspaceID: String) -> Bool {
+    func switchWorkspace(
+        rawWorkspaceID: String,
+        affectedWorkspaces: Set<WorkspaceDescriptor.ID> = []
+    ) -> Bool {
         guard let controller else { return false }
         let currentWorkspace = controller.activeWorkspace()
         if let currentWorkspace,
@@ -47,7 +50,8 @@ extension WorkspaceNavigationHandler {
         commitWorkspaceTransitionFocusHandoff(
             targetWorkspaceId: result.workspace.id,
             monitor: result.monitor,
-            startScrollAnimation: false
+            startScrollAnimation: false,
+            affectedWorkspaces: affectedWorkspaces
         )
         return true
     }

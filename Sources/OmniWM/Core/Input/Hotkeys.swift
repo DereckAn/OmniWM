@@ -9,6 +9,7 @@ import IOKit.hidsystem
 @MainActor
 final class HotkeyCenter {
     var onCommand: ((HotkeyInvocation) -> Void)?
+    var isOverviewMouseButtonCaptured: ((Int64) -> Bool)?
 
     private let carbonRegistrations = CarbonHotkeyRegistration()
     private var isRunning = false
@@ -318,6 +319,9 @@ extension HotkeyCenter {
 
     private func handleHyperTriggerMouseEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         let button = event.getIntegerValueField(.mouseEventButtonNumber)
+        if isOverviewMouseButtonCaptured?(button) == true {
+            return Unmanaged.passUnretained(event)
+        }
         switch type {
         case .otherMouseDown:
             return applyHyperTriggerDecision(hyperTrigger.handleMouseDown(button), to: event)

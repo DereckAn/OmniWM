@@ -144,6 +144,31 @@ extension MouseEventHandler {
         )
     }
 
+    func receiveTapOverviewMouseButton(type: CGEventType, button: Int64) -> Bool {
+        if state.capturedOverviewButton == button {
+            if type == .otherMouseUp {
+                state.capturedOverviewButton = nil
+            }
+            return true
+        }
+        guard type == .otherMouseDown,
+              let controller,
+              OverviewInputSettingsValidation.mouseButtons.contains(button),
+              controller.settings.overview.mouseButton == button,
+              controller.settings.systemHyperTrigger.mouseButtonNumber != button
+        else { return false }
+
+        flushQueuedTapEventsBeforeImmediateDispatch()
+        guard controller.isEnabled, !isInputSuppressed,
+              state.capturedOverviewButton == nil, state.capturedInteractionButton == nil,
+              !state.isMoving, !state.isResizing, !isTrackpadSwipeSessionActive,
+              state.nativeTitleBarDrag == nil, !state.awaitsNativeTitleBarDragTarget
+        else { return false }
+        state.capturedOverviewButton = button
+        controller.windowActionHandler.toggleOverview()
+        return true
+    }
+
     @discardableResult
     func receiveTapMouseDown(
         at location: CGPoint,

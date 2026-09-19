@@ -14,6 +14,8 @@ final class OverviewViewInteractionTests: XCTestCase {
         var dragBegins: [(handle: WindowHandle, start: CGPoint)] = []
         var dragUpdates: [CGPoint] = []
         var dragEnds: [CGPoint] = []
+        var workspaces: [WorkspaceDescriptor.ID] = []
+        var pills: [OverviewOverflowPill] = []
     }
 
     private let cardFrame = CGRect(x: 100, y: 100, width: 200, height: 140)
@@ -106,6 +108,33 @@ final class OverviewViewInteractionTests: XCTestCase {
         XCTAssertTrue(surface.recorder.dragBegins.isEmpty)
     }
 
+    func testRibbonPressActivatesWorkspaceAndOverflowPillPages() throws {
+        let surface = try makeSurface()
+        defer { surface.panel.close() }
+        var section = try XCTUnwrap(surface.view.layout.workspaceSections.first)
+        section.ribbonFrame = CGRect(x: 20, y: 40, width: 760, height: 300)
+        section.hiddenColumnsAfter = 2
+        var layout = surface.view.layout
+        layout.replaceWorkspaceSections([section])
+        surface.view.updateLayout(layout, state: .open, searchQuery: "", selectedWindowHandle: nil)
+        surface.view.updateLayer()
+
+        let ribbonBackground = CGPoint(x: 600, y: 60)
+        surface.view.mouseDown(with: try mouseEvent(.leftMouseDown, at: ribbonBackground, in: surface.panel))
+        XCTAssertEqual(surface.recorder.workspaces, [section.workspaceId])
+        XCTAssertEqual(surface.recorder.dismissals, 0)
+
+        let pill = try XCTUnwrap(layout.overflowPills(for: section).first)
+        surface.view.mouseDown(with: try mouseEvent(
+            .leftMouseDown,
+            at: CGPoint(x: pill.frame.midX, y: pill.frame.midY),
+            in: surface.panel
+        ))
+        XCTAssertEqual(surface.recorder.pills, [pill])
+        XCTAssertEqual(surface.recorder.workspaces.count, 1)
+        XCTAssertTrue(surface.recorder.selected.isEmpty)
+    }
+
     func testBackdropPressDismissesOnMouseDown() throws {
         let surface = try makeSurface()
         defer { surface.panel.close() }
@@ -116,6 +145,23 @@ final class OverviewViewInteractionTests: XCTestCase {
         surface.view.mouseUp(with: try mouseEvent(.leftMouseUp, at: backdrop, in: surface.panel))
 
         XCTAssertEqual(surface.recorder.dismissals, 1)
+        XCTAssertTrue(surface.recorder.selected.isEmpty)
+    }
+
+    func testClearSearchHasItsOwnHitTargetWithoutDismissal() throws {
+        let surface = try makeSurface()
+        defer { surface.panel.close() }
+        var layout = surface.view.layout
+        layout.searchBarFrame = CGRect(x: 200, y: 520, width: 400, height: 44)
+        surface.view.updateLayout(layout, state: .open, searchQuery: "Missing", selectedWindowHandle: nil)
+        var cleared = 0
+        surface.view.onClearSearch = { cleared += 1 }
+        let frame = layout.searchClearFrame
+        surface.view.mouseDown(with: try mouseEvent(
+            .leftMouseDown, at: CGPoint(x: frame.midX, y: frame.midY), in: surface.panel
+        ))
+        XCTAssertEqual(cleared, 1)
+        XCTAssertEqual(surface.recorder.dismissals, 0)
         XCTAssertTrue(surface.recorder.selected.isEmpty)
     }
 
@@ -159,6 +205,8 @@ final class OverviewViewInteractionTests: XCTestCase {
         view.onWindowSelected = { recorder.selected.append($0) }
         view.onWindowClosed = { recorder.closed.append($0) }
         view.onDismiss = { recorder.dismissals += 1 }
+        view.onWorkspaceSelected = { recorder.workspaces.append($0) }
+        view.onOverflowPillPressed = { recorder.pills.append($0) }
         view.onDragBegin = { recorder.dragBegins.append((handle: $0, start: $1)) }
         view.onDragUpdate = { recorder.dragUpdates.append($0) }
         view.onDragEnd = { recorder.dragEnds.append($0) }

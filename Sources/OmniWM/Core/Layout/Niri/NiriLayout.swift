@@ -259,7 +259,7 @@ extension NiriLayoutEngine {
         }
     }
 
-    private func resolveWindowSpans(
+    func resolveWindowSpans(
         container: NiriContainer,
         windows: [NiriWindow],
         axis: NiriAxisLayout,

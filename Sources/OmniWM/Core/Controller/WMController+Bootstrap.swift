@@ -14,6 +14,9 @@ extension WMController {
         intentLedger.deadlineWheel = deadlineWheel
         focusPolicyEngine.intentLedger = intentLedger
         focusPolicyEngine.deadlineWheel = deadlineWheel
+        hotkeys.isOverviewMouseButtonCaptured = { [weak self] button in
+            self?.mouseEventHandler.state.capturedOverviewButton == button
+        }
         hotkeys.onCommand = { [weak self] invocation in
             guard let self else { return }
             if !eventIntake.enqueue(.hotkeyInvocation(invocation)) {

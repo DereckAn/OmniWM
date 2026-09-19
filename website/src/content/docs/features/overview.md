@@ -9,7 +9,8 @@ Press `Option + Shift + O` and all of your workspaces' windows fly into a scroll
 
 ## Finding and focusing windows
 
-- Type to filter windows live; `Backspace` deletes search text.
+- Type to filter by window title or app name, including inactive members of Niri tabbed columns and Dwindle groups; `Backspace` deletes search text.
+- Grouped windows share one preview card. Use its arrows or click the position indicator to choose a window by title. Small Dwindle cards use a compact count picker. Browsing changes the preview; the chosen window becomes active when you dismiss Overview to it.
 - `Arrow Keys` navigate spatially; `Left` / `Right` stay within the current workspace. `Tab` / `Shift + Tab` cycle forward or backward through matching windows, and keyboard navigation automatically scrolls the selected thumbnail into view.
 - `Enter` focuses the selected window; pressing and releasing a thumbnail without dragging it focuses that window. `Escape`, the configured Overview shortcut, and clicking the backdrop also dismiss Overview and focus the current selection; `Escape` does not clear search first.
 - Mouse and trackpad scrolling follow the system Natural Scrolling setting.

@@ -13,6 +13,9 @@ extension MouseEventHandler {
             (1 << CGEventType.rightMouseDown.rawValue) |
             (1 << CGEventType.rightMouseDragged.rawValue) |
             (1 << CGEventType.rightMouseUp.rawValue) |
+            (1 << CGEventType.otherMouseDown.rawValue) |
+            (1 << CGEventType.otherMouseDragged.rawValue) |
+            (1 << CGEventType.otherMouseUp.rawValue) |
             (1 << CGEventType.scrollWheel.rawValue)
         if !annotatedMoveTapInstalled {
             mask |= 1 << CGEventType.mouseMoved.rawValue
@@ -176,6 +179,8 @@ extension MouseEventHandler {
         let screenLocation = ScreenCoordinateSpace.toAppKit(point: location)
         let modifiers = event.flags
         let windowIdUnderPointer = type == .mouseMoved ? eventWindowIdUnderPointer(event) : nil
+        let buttonNumber = type == .otherMouseDown || type == .otherMouseDragged || type == .otherMouseUp
+            ? event.getIntegerValueField(.mouseEventButtonNumber) : nil
         let scrollPayload = type == .scrollWheel ? Self.scrollPayload(
             event,
             at: screenLocation,
@@ -184,6 +189,9 @@ extension MouseEventHandler {
         return MainActor.assumeIsolated {
             guard let handler = MouseEventHandler._instance else { return false }
             if handler.isCapturingPerformance { handler.recordCGEvent(type) }
+            if let buttonNumber {
+                return handler.receiveTapOverviewMouseButton(type: type, button: buttonNumber)
+            }
             return handler.dispatchTapEvent(
                 type: type, location: screenLocation, modifiers: modifiers,
                 windowIdUnderPointer: windowIdUnderPointer, scrollPayload: scrollPayload

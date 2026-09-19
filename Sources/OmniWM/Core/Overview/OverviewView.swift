@@ -9,27 +9,43 @@ final class OverviewView: NSView {
     private(set) var layout: OverviewLayout = .init()
     private(set) var searchQuery: String = ""
     private(set) var palette: OverviewRenderPalette
-    private(set) var selectedWindowHandle: WindowHandle?
+    private(set) var selection: OverviewSelection?
+    var selectedWindowHandle: WindowHandle? {
+        selection?.windowHandle
+    }
+
     private(set) var presentationProgress: Double = 0
 
     private let displayId: CGDirectDisplayID
 
     var onWindowSelected: ((WindowHandle) -> Void)?
     var onWindowClosed: ((WindowHandle) -> Void)?
+    var onNewWorkspace: (() -> Void)?
+    var onTabSelected: ((WindowHandle) -> Void)?
+    var onClearSearch: (() -> Void)?
+    var onStripPan: ((CGPoint, CGFloat) -> Void)?
+    var onWorkspaceSelected: ((WorkspaceDescriptor.ID) -> Void)?
+    var onOverflowPillPressed: ((OverviewOverflowPill) -> Void)?
     var onDismiss: (() -> Void)?
     var onScroll: ((CGFloat) -> Void)?
-    var onScrollWithModifiers: ((CGFloat, NSEvent.ModifierFlags, Bool) -> Void)?
+    var onScrollEvent: ((OverviewScrollInput.Event) -> Void)?
     var onDragBegin: ((WindowHandle, CGPoint) -> Void)?
     var onDragUpdate: ((CGPoint) -> Void)?
     var onDragEnd: ((CGPoint) -> Void)?
 
     private var trackingArea: NSTrackingArea?
+    private var rightDragPoint: CGPoint?
     private var dragCandidateHandle: WindowHandle?
     private var dragStartPoint: CGPoint = .zero
     private var isDragging: Bool = false
     private var hoveredWindowHandle: WindowHandle?
     private var closeButtonHovered = false
-    let layerRenderer = OverviewLayerRenderer()
+    private var tabPicker: OverviewTabPicker?
+    var isTabPickerOpen: Bool {
+        tabPicker != nil
+    }
+
+    let layerRenderer: OverviewLayerRenderer
     private let dragThreshold: CGFloat = 6.0
 
     init(
@@ -39,7 +55,7 @@ final class OverviewView: NSView {
     ) {
         self.displayId = displayId
         self.palette = palette
-        selectedWindowHandle = nil
+        layerRenderer = OverviewLayerRenderer(displayId: displayId)
         super.init(frame: frame)
         wantsLayer = true
         layerContentsRedrawPolicy = .onSetNeedsDisplay
@@ -57,11 +73,18 @@ final class OverviewView: NSView {
         searchQuery: String,
         selectedWindowHandle: WindowHandle?,
         palette: OverviewRenderPalette? = nil,
-        animationsEnabled: Bool = true
+        animationsEnabled: Bool = true,
+        selection: OverviewSelection? = nil,
+        update: OverviewLayoutUpdate = .preserve
     ) {
         self.layout = layout
         self.searchQuery = searchQuery
-        self.selectedWindowHandle = selectedWindowHandle
+        self.selection = selection ?? selectedWindowHandle.map(OverviewSelection.window)
+        if let tabPicker,
+           !state.isOpen || state.isAnimating || layout.window(for: tabPicker.handle)?.isDisplayed != true
+        {
+            closeTabPicker()
+        }
         if let hoveredWindowHandle,
            layout.window(for: hoveredWindowHandle)?.matchesSearch != true
         {
@@ -73,7 +96,7 @@ final class OverviewView: NSView {
             cancelAnimation()
             presentationProgress = 0
         case .open:
-            cancelAnimation()
+            if layerRenderer.activeTransition != nil { cancelAnimation() }
             presentationProgress = 1
         case .opening,
              .closing:
@@ -85,7 +108,9 @@ final class OverviewView: NSView {
         layerRenderer.updateLayout(
             layout,
             state: renderState,
-            caretAnimated: !state.isAnimating && state.isOpen && animationsEnabled
+            caretAnimated: !state.isAnimating && state.isOpen && animationsEnabled,
+            update: update,
+            animationsEnabled: animationsEnabled
         )
         needsDisplay = true
     }
@@ -105,6 +130,7 @@ final class OverviewView: NSView {
     }
 
     func cancelAnimation() {
+        layout = layerRenderer.freezingReflow(in: layout)
         layerRenderer.cancelAnimation()
     }
 
@@ -113,8 +139,8 @@ final class OverviewView: NSView {
         needsDisplay = true
     }
 
-    func updatePreview(_ frame: OverviewPreviewFrame?, for handle: WindowHandle) {
-        layerRenderer.updatePreview(frame, for: handle)
+    func updatePreview(_ frame: OverviewPreviewFrame?, for handle: WindowHandle, animated: Bool = true) {
+        layerRenderer.updatePreview(frame, for: handle, animated: animated)
     }
 
     func clearPreviews() {
@@ -173,6 +199,28 @@ final class OverviewView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if !searchQuery.isEmpty, layout.searchClearFrame.contains(point) {
+            onClearSearch?()
+            return
+        }
+        let layoutPoint = layerRenderer.layoutPoint(at: point, layout: layout)
+        if let pill = layout.overflowPill(at: layoutPoint) {
+            onOverflowPillPressed?(pill)
+            return
+        }
+        if let control = layerRenderer.tabControl(at: point, layout: layout) {
+            if let handle = control.steppedHandle(at: point) {
+                onTabSelected?(handle)
+            } else if control.frame(for: .picker).contains(point) {
+                showTabPicker(control)
+            }
+            return
+        }
+        let adjustedPoint = CGPoint(x: layoutPoint.x, y: layoutPoint.y + layout.scrollOffset)
+        if layout.newWorkspaceTarget?.frame.contains(adjustedPoint) == true {
+            onNewWorkspace?()
+            return
+        }
         let hit = layerRenderer.windowHit(at: point, layout: layout)
 
         if let hit, hit.isCloseButton {
@@ -187,6 +235,11 @@ final class OverviewView: NSView {
             return
         }
 
+        if let section = layout.ribbonSection(at: layoutPoint) {
+            onWorkspaceSelected?(section.workspaceId)
+            return
+        }
+
         onDismiss?()
     }
 
@@ -197,6 +250,8 @@ final class OverviewView: NSView {
 
         if !isDragging {
             guard distance >= dragThreshold else { return }
+            closeTabPicker()
+            layerRenderer.cancelReflow()
             isDragging = true
             onDragBegin?(handle, dragStartPoint)
         }
@@ -215,12 +270,32 @@ final class OverviewView: NSView {
         }
     }
 
+    override func rightMouseDown(with event: NSEvent) {
+        rightDragPoint = convert(event.locationInWindow, from: nil)
+    }
+
+    override func rightMouseDragged(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        guard let previous = rightDragPoint else { return }
+        onStripPan?(layerRenderer.layoutPoint(at: point, layout: layout), point.x - previous.x)
+        rightDragPoint = point
+    }
+
+    override func rightMouseUp(with event: NSEvent) {
+        rightDragPoint = nil
+    }
+
     override func scrollWheel(with event: NSEvent) {
-        let delta = OverviewScrollInput.dominantDelta(deltaX: event.scrollingDeltaX, deltaY: event.scrollingDeltaY)
-        if let onScrollWithModifiers {
-            onScrollWithModifiers(delta, event.modifierFlags, event.hasPreciseScrollingDeltas)
+        if let onScrollEvent {
+            onScrollEvent(OverviewScrollInput.Event(
+                deltaX: event.scrollingDeltaX,
+                deltaY: event.scrollingDeltaY,
+                modifiers: event.modifierFlags,
+                isPrecise: event.hasPreciseScrollingDeltas,
+                location: layerRenderer.layoutPoint(at: convert(event.locationInWindow, from: nil), layout: layout)
+            ))
         } else {
-            onScroll?(delta)
+            onScroll?(OverviewScrollInput.dominantDelta(deltaX: event.scrollingDeltaX, deltaY: event.scrollingDeltaY))
         }
     }
 
@@ -267,6 +342,28 @@ final class OverviewView: NSView {
 }
 
 extension OverviewView {
+    func closeTabPicker() {
+        tabPicker?.cancel()
+        tabPicker = nil
+    }
+
+    private func showTabPicker(_ control: OverviewTabControl) {
+        let members = layout.tabMembers(for: control.handle)
+        guard members.count > 1 else { return }
+        let picker = OverviewTabPicker(handle: control.handle, members: members) { [weak self] handle in
+            guard let self,
+                  self.layout.tabMembers(for: control.handle).contains(where: { $0.handle == handle }) else { return }
+            self.onTabSelected?(handle)
+        }
+        tabPicker = picker
+        defer { if tabPicker === picker { tabPicker = nil } }
+        picker.menu.popUp(
+            positioning: nil,
+            at: CGPoint(x: control.frame.minX, y: control.frame.minY),
+            in: self
+        )
+    }
+
     private var renderState: OverviewRenderState {
         OverviewRenderState(
             searchQuery: searchQuery,
@@ -275,7 +372,8 @@ extension OverviewView {
             closeButtonHovered: closeButtonHovered,
             progress: presentationProgress,
             bounds: bounds,
-            palette: palette
+            palette: palette,
+            selection: selection
         )
     }
 }

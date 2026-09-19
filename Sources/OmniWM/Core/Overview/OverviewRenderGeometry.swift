@@ -13,6 +13,11 @@ enum OverviewRenderGeometry {
     }
 
     static func restAnchor(for section: OverviewWorkspaceSection) -> RestAnchor? {
+        if section.visibleFrame.width > 0, section.visibleFrame.height > 0,
+           section.viewportFrame.width > 0, section.viewportFrame.height > 0
+        {
+            return RestAnchor(overviewBounds: section.visibleFrame, restBounds: section.viewportFrame)
+        }
         let overviewBounds = section.windows.reduce(CGRect.null) { $0.union($1.overviewFrame) }
         let restBounds = section.windows.reduce(CGRect.null) { $0.union($1.originalFrame) }
         guard overviewBounds.width > 0, overviewBounds.height > 0,

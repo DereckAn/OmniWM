@@ -8,6 +8,7 @@ struct NativeFullscreenPlaceholderUpdate: Equatable {
     let originalToken: WindowToken
     let currentToken: WindowToken
     let workspaceId: WorkspaceDescriptor.ID
+    var windowTitle: String = ""
     var frame: CGRect
     var displayContext: NativeFullscreenDisplayContext?
     let selected: Bool

@@ -117,15 +117,16 @@ extension MouseEventHandler {
 
     func recoverAfterTapDisable() {
         cancelActiveMouseInteraction()
-        if pressedMouseButtonsProvider() & MouseButton.left.pressedMask == 0 {
+        let pressedButtons = pressedMouseButtonsProvider()
+        if pressedButtons & MouseButton.left.pressedMask == 0 {
             finishNativeTitleBarDragIfNeeded(button: .left)
         }
-        guard let button = state.capturedInteractionButton,
-              pressedMouseButtonsProvider() & button.pressedMask == 0
-        else {
-            return
+        if let button = state.capturedInteractionButton, pressedButtons & button.pressedMask == 0 {
+            state.capturedInteractionButton = nil
         }
-        state.capturedInteractionButton = nil
+        if let button = state.capturedOverviewButton, pressedButtons & (1 << Int(button)) == 0 {
+            state.capturedOverviewButton = nil
+        }
     }
 
     private func finishActiveResize() {

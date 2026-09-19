@@ -139,6 +139,7 @@ struct WorldView {
                     originalToken: record.originalToken,
                     currentToken: record.currentToken,
                     workspaceId: record.workspaceId,
+                    windowTitle: entry?.managedReplacementMetadata?.title ?? "",
                     frame: .zero,
                     displayContext: nil,
                     selected: workspaceManager.selectedManagedToken == record.currentToken

@@ -10,8 +10,8 @@ import QuartzCore
 import XCTest
 
 final class OverviewRendererTests: XCTestCase {
-    func testDefaultPalettePreservesExistingColors() {
-        assertColor(OverviewRenderPalette.default.backdrop, equals: [0.05, 0.05, 0.08, 1.0])
+    func testDefaultPaletteUsesTransparentBackdropAndConfiguredBorderColors() {
+        assertColor(OverviewRenderPalette.default.backdrop, equals: [0.05, 0.05, 0.08, 0])
         assertColor(OverviewRenderPalette.default.normalBorder, equals: [0.3, 0.3, 0.35, 0.5])
         assertColor(OverviewRenderPalette.default.hoveredBorder, equals: [0.4, 0.6, 1.0, 1.0])
         assertColor(OverviewRenderPalette.default.selectedBorder, equals: [0.3, 0.8, 0.4, 1.0])
@@ -25,10 +25,34 @@ final class OverviewRendererTests: XCTestCase {
             selectedBorderColor: SettingsColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 0.6)
         )
 
-        assertColor(palette.backdrop, equals: [0.05, 0, 1, 1])
+        assertColor(palette.backdrop, equals: [0.05, 0, 1, 0])
         assertColor(palette.normalBorder, equals: [0.3, 0.4, 0.5, 0.6])
         assertColor(palette.hoveredBorder, equals: [0.1, 0.2, 0.3, 0.4])
         assertColor(palette.selectedBorder, equals: [0.9, 0.8, 0.7, 0.6])
+    }
+
+    func testPaletteCarriesResolvedFocusBorderConfiguration() {
+        let config = BorderConfig(
+            enabled: true,
+            width: 8,
+            color: SettingsColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1),
+            gradient: BorderGradient(
+                enabled: true,
+                start: SettingsColor(red: 1, green: 0, blue: 0, alpha: 1),
+                end: SettingsColor(red: 0, green: 0, blue: 1, alpha: 1),
+                direction: .topRightToBottomLeft,
+                dark: nil
+            ),
+            glow: BorderGlow(enabled: true, radius: 12, opacity: 0.5)
+        )
+        let palette = OverviewRenderPalette(
+            backdropColor: SettingsColor(red: 0, green: 0, blue: 0, alpha: 0),
+            normalBorderColor: SettingsColor(red: 0, green: 0, blue: 0, alpha: 1),
+            hoveredBorderColor: SettingsColor(red: 0, green: 0, blue: 0, alpha: 1),
+            selectedBorderColor: config.color,
+            focusBorder: config
+        )
+        XCTAssertEqual(palette.focusBorder, config)
     }
 
     func testSelectedBorderTakesPrecedenceOverHoveredAndNormalColors() {

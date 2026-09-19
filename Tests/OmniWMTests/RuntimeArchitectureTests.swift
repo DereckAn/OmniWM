@@ -864,6 +864,9 @@ final class RuntimeArchitectureTests: XCTestCase {
             .rightMouseDown,
             .rightMouseDragged,
             .rightMouseUp,
+            .otherMouseDown,
+            .otherMouseDragged,
+            .otherMouseUp,
             .scrollWheel
         ] {
             let bit: CGEventMask = 1 << type.rawValue
