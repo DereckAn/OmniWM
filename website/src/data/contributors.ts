@@ -26,6 +26,7 @@ export const contributors: Contributor[] = [
   { name: 'Lukas Gerlinski', handle: 'lgerlinski' },
   { name: 'Marcus Harlid Davin', handle: 'zucram' },
   { name: 'Mateusz Juszczyk', handle: 'MateuszJuszczyk' },
+  { name: 'matt petters', handle: 'mattpetters' },
   { name: 'Matt Wicks', handle: 'wicksipedia' },
   { name: 'mkdir700', handle: 'mkdir700' },
   { name: 'mm', handle: 'zwo-bot' },

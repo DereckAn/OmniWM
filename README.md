@@ -416,6 +416,9 @@ OmniWM is a free, open-source, Developer ID-signed and Apple-notarized tiling wi
       <a href="https://github.com/MateuszJuszczyk" title="Mateusz Juszczyk">
         <img src="https://github.com/MateuszJuszczyk.png?size=96" width="72" alt="Mateusz Juszczyk">
       </a>
+      <a href="https://github.com/mattpetters" title="matt petters">
+        <img src="https://github.com/mattpetters.png?size=96" width="72" alt="matt petters">
+      </a>
       <a href="https://github.com/wicksipedia" title="Matt Wicks">
         <img src="https://github.com/wicksipedia.png?size=96" width="72" alt="Matt Wicks">
       </a>
