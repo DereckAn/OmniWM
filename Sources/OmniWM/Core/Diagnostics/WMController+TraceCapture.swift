@@ -247,6 +247,7 @@ extension WMController {
         )
         if case .started = outcome, profile == .problem {
             seedWindowAdmissionTrace()
+            mouseEventHandler.recordTrackpadTraceSnapshot()
         }
         return outcome
     }
