@@ -311,6 +311,8 @@ extension MouseEventHandler {
             if phase == CGScrollPhase.ended.rawValue || phase == CGScrollPhase.cancelled.rawValue {
                 return .terminalTail
             }
+            // mayBegin can be interleaved with the released gesture's momentum tail.
+            guard phase == CGScrollPhase.began.rawValue else { return .momentumTail }
             state.suppressTrackpadMomentumScroll = false
             return .freshPhase
         }

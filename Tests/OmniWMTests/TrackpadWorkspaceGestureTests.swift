@@ -1802,7 +1802,7 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
         try assertTracedScroll(fixture, momentumPhase: 2, decision: .momentumTail)
 
         let freshPhase = try assertTracedScroll(
-            fixture, phase: CGScrollPhase.changed.rawValue, decision: .freshPhase
+            fixture, phase: CGScrollPhase.began.rawValue, decision: .freshPhase
         )
         let states = freshPhase.components(separatedBy: " after={")
         XCTAssertEqual(states.count, 2)
@@ -1928,9 +1928,16 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
 
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.ended.rawValue))
         XCTAssertTrue(handler.state.suppressTrackpadMomentumScroll)
+        XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 1, phase: 0))
+        // A mayBegin event can arrive between momentum events after every finger has lifted.
+        XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.mayBegin.rawValue))
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 2, phase: 0))
-        XCTAssertFalse(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.changed.rawValue))
+        XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.changed.rawValue))
+        XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 3, phase: 0))
+        XCTAssertTrue(handler.state.suppressTrackpadMomentumScroll)
+        XCTAssertFalse(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.began.rawValue))
         XCTAssertFalse(handler.state.suppressTrackpadMomentumScroll)
+        XCTAssertFalse(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.changed.rawValue))
     }
 
     func testCursorMonitorSwipeSwitchesThatMonitorOnly() throws {
