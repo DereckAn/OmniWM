@@ -56,7 +56,7 @@ extension AXEventHandler {
         else {
             return
         }
-        guard await controller.axManager.ensureContext(for: app),
+        guard await controller.axManager.ensureContext(for: app, pid: pid),
               !Task.isCancelled
         else { return }
         controller.axManager.bindManagedWindows(controller.workspaceManager.entries(forPid: pid))

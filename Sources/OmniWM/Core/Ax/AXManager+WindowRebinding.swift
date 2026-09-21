@@ -18,7 +18,7 @@ extension AXManager {
         } else {
             guard let app = NSRunningApplication(processIdentifier: newWindow.token.pid),
                   !app.isTerminated,
-                  let created = try? await AppAXContextRegistry.getOrCreate(app)
+                  let created = try? await AppAXContextRegistry.getOrCreate(app, pid: newWindow.token.pid)
             else {
                 return nil
             }

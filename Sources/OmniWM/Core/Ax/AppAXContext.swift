@@ -51,6 +51,7 @@ final class AppAXContext {
 
     nonisolated init(
         _ nsApp: NSRunningApplication,
+        pid: pid_t,
         _ axApp: ThreadGuardedValue<AXUIElement>,
         _ windows: ThreadGuardedValue<[Int: AXUIElement]>,
         _ observer: ThreadGuardedValue<AXObserver?>,
@@ -63,7 +64,7 @@ final class AppAXContext {
         _ thread: Thread
     ) {
         self.nsApp = nsApp
-        pid = nsApp.processIdentifier
+        self.pid = pid
         self.axApp = axApp
         self.windows = windows
         axObserver = observer
