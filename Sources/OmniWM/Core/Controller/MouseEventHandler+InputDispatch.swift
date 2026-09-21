@@ -311,6 +311,7 @@ extension MouseEventHandler {
             if phase == CGScrollPhase.ended.rawValue || phase == CGScrollPhase.cancelled.rawValue {
                 return .terminalTail
             }
+            guard phase == CGScrollPhase.began.rawValue else { return .momentumTail }
             state.suppressTrackpadMomentumScroll = false
             return .freshPhase
         }

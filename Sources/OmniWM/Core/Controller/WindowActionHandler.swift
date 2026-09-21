@@ -92,6 +92,7 @@ final class WindowActionHandler {
 
     func openOverview() {
         controller?.layoutRefreshController.workspaceSwipe.cancel(reason: "overview")
+        overviewController.input.beginGestureScrollSuppression()
         overviewController.open()
     }
 
