@@ -90,6 +90,7 @@ final class WindowActionHandler {
     }
 
     func openOverview() {
+        overviewController.input.beginGestureScrollSuppression()
         overviewController.open()
     }
 

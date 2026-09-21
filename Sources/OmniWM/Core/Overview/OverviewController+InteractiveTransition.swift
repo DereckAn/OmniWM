@@ -79,6 +79,7 @@ extension OverviewController {
         case .opening:
             break
         }
+        input.beginGestureScrollSuppression()
         animator.beginTracking()
         return true
     }
