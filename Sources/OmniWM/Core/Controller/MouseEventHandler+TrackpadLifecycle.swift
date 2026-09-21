@@ -7,7 +7,8 @@ import Foundation
 extension MouseEventHandler {
     func commitGestureMode(
         metrics: GestureFrameMetrics,
-        lockedContext: MouseInputState.LockedGestureContext
+        lockedContext: MouseInputState.LockedGestureContext,
+        timestamp: TimeInterval
     ) -> Bool {
         guard let controller, var config = trackpadGestureConfig else {
             abortActiveGestureIfNeeded()
@@ -44,6 +45,15 @@ extension MouseEventHandler {
         MouseTrace.record("gesture: committed \(mode) with \(lockedContext.fingerCount) fingers")
         state.activeGestureMode = mode
         state.gesturePhase = .committed
+        if case let .workspaceSwitch(axis) = mode {
+            controller.layoutRefreshController.workspaceSwipe.begin(
+                axis: axis, cumulative: axis == .horizontal ? metrics.cumulativeX : metrics.cumulativeY,
+                timestamp: timestamp
+            )
+            if controller.layoutRefreshController.workspaceSwipe.hasPresentation { state.workspaceSwipeFired = true }
+        } else {
+            controller.layoutRefreshController.workspaceSwipe.cancel(reason: "other-gesture")
+        }
         return true
     }
 
@@ -81,10 +91,11 @@ extension MouseEventHandler {
                 timestamp: timestamp
             )
         case let .workspaceSwitch(axis):
-            handleWorkspaceSwipeFrame(
+            dispatchWorkspaceSwipeFrame(
                 axis: axis,
-                cumulative: axis == .horizontal ? metrics.cumulativeX : metrics.cumulativeY,
-                monitorId: lockedContext.monitorId
+                metrics: metrics,
+                monitorId: lockedContext.monitorId,
+                timestamp: timestamp
             )
         case .windowMove:
             guard state.gestureOwnsWindowInteraction, state.isMoving else {
@@ -101,6 +112,24 @@ extension MouseEventHandler {
         case nil:
             abortActiveGestureIfNeeded()
         }
+    }
+
+    private func dispatchWorkspaceSwipeFrame(
+        axis: WorkspaceSwipeAxis,
+        metrics: GestureFrameMetrics,
+        monitorId: Monitor.ID,
+        timestamp: TimeInterval
+    ) {
+        guard let controller else { return }
+        if controller.layoutRefreshController.workspaceSwipe.update(
+            cumulative: axis == .horizontal ? metrics.cumulativeX : metrics.cumulativeY,
+            timestamp: timestamp
+        ) { return }
+        handleWorkspaceSwipeFrame(
+            axis: axis,
+            cumulative: axis == .horizontal ? metrics.cumulativeX : metrics.cumulativeY,
+            monitorId: monitorId
+        )
     }
 
     private func handleOverviewSwipe(
@@ -197,6 +226,11 @@ extension MouseEventHandler {
         timestamp: TimeInterval
     ) {
         defer { state.suppressTrackpadMomentumScroll = true }
+        if controller?.layoutRefreshController.workspaceSwipe
+            .release(timestamp: timestamp, allowFlick: allowFlick) == true
+        {
+            return
+        }
         guard allowFlick, !state.workspaceSwipeFired else { return }
         state.workspaceSwipeTracker.push(delta: 0, timestamp: timestamp)
         let cumulative = (axis == .horizontal
@@ -321,6 +355,7 @@ extension MouseEventHandler {
             if case .overview = state.activeGestureMode {
                 state.suppressTrackpadMomentumScroll = true
             } else if case .workspaceSwitch = state.activeGestureMode {
+                controller?.layoutRefreshController.workspaceSwipe.cancel(reason: "gesture-aborted")
                 state.suppressTrackpadMomentumScroll = true
             } else if state.activeGestureMode?.isWindowInteraction == true {
                 cancelGestureWindowInteraction()
@@ -344,6 +379,7 @@ extension MouseEventHandler {
     }
 
     func resetGestureState(settleViewportGesture: Bool = true) {
+        controller?.layoutRefreshController.workspaceSwipe.stopPreparing(warm: true)
         cancelGestureWindowInteraction()
         if state.lockedGestureContext?.overviewAction != nil {
             controller?.windowActionHandler.endOverviewGesture(timestamp: nil)

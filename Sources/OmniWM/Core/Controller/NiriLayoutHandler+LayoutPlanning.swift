@@ -332,7 +332,7 @@ extension NiriLayoutHandler {
         )
     }
 
-    func settledFrames(in workspaceId: WorkspaceDescriptor.ID) -> [WindowToken: CGRect]? {
+    func settledFrames(in workspaceId: WorkspaceDescriptor.ID, visibleOnly: Bool = false) -> [WindowToken: CGRect]? {
         guard let controller,
               let engine = controller.niriEngine,
               let monitor = controller.workspaceManager.monitor(for: workspaceId),
@@ -350,13 +350,14 @@ extension NiriLayoutHandler {
         else {
             return nil
         }
-        return calculateOnDemandFrames(
+        let result = calculateOnDemandFrames(
             snapshot: snapshot,
             engine: engine,
             monitor: monitor,
             sampledAnimationTime: nil,
             isSettled: true
-        ).frames
+        )
+        return visibleOnly ? result.frames.filter { result.hiddenHandles[$0.key] == nil } : result.frames
     }
 
     private func calculateOnDemandFrames(

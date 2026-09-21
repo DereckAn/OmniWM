@@ -62,7 +62,11 @@ extension AXManager {
     ) -> [AXFrameApplicationTarget] {
         guard needsFrameWriteFiltering
         else { return frames }
-        return frames.filter { isFrameAllowedToWrite($0) }
+        return frames.filter {
+            let allowed = isFrameAllowedToWrite($0)
+            if !allowed { workspaceFrameSettlement?.reject($0) }
+            return allowed
+        }
     }
 
     private func isFrameAllowedToWrite(_ target: AXFrameApplicationTarget) -> Bool {

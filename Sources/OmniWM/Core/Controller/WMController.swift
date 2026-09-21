@@ -433,6 +433,7 @@ extension WMController {
         domains: InvalidationDomain,
         surfaceScope: SessionSurfaceInvalidationScope
     ) {
+        layoutRefreshController.workspaceSwipe.handleInvalidation(workspaceId: workspaceId, domains: domains)
         switch surfaceScope {
         case .full:
             surfaceReconciler.noteWorldChanged()

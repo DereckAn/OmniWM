@@ -1778,6 +1778,109 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
         ))
     }
 
+    func testScrollTraceExplainsSuppressionAndReleasedContactOwnership() throws {
+        let fixture = try makeFixture()
+        let recorder = TrackpadScrollTrace.shared
+        recorder.beginCapture()
+        defer {
+            recorder.endCapture()
+            recorder.releaseStorage()
+        }
+
+        sendFrame(fixture, phase: .began, fingers: 3, x: 0.5, y: 0.2, at: 100)
+        try assertTracedScroll(fixture, phase: CGScrollPhase.changed.rawValue, decision: .activeGesture)
+        try assertTracedScroll(fixture, decision: .ownedSession)
+        sendFrame(fixture, phase: .changed, fingers: 3, x: 0.5, y: 0.24, at: 100.01)
+        sendFrame(fixture, phase: .changed, fingers: 2, x: 0.5, y: 0.24, at: 100.02)
+        try assertTracedScroll(fixture, phase: CGScrollPhase.changed.rawValue, decision: .liftLatch)
+
+        sendFrame(fixture, phase: .ended, fingers: 0, x: 0, y: 0, at: 100.03)
+        let released = try assertTracedScroll(fixture, decision: .ownedSession)
+        XCTAssertTrue(released.contains("retained=1:0:1:1591 retainedCurrent=1"))
+        try assertTracedScroll(fixture, phase: CGScrollPhase.ended.rawValue, decision: .terminalTail)
+        try assertTracedScroll(fixture, phase: CGScrollPhase.cancelled.rawValue, decision: .terminalTail)
+        try assertTracedScroll(fixture, momentumPhase: 2, decision: .momentumTail)
+
+        let freshPhase = try assertTracedScroll(
+            fixture, phase: CGScrollPhase.changed.rawValue, decision: .freshPhase
+        )
+        let states = freshPhase.components(separatedBy: " after={")
+        XCTAssertEqual(states.count, 2)
+        XCTAssertTrue(states.first?.contains("suppressMomentum=true") == true)
+        XCTAssertTrue(states.last?.contains("suppressMomentum=false") == true)
+        try assertTracedScroll(fixture, phase: CGScrollPhase.changed.rawValue, decision: .trackpadUnclaimed)
+        try assertTracedScroll(fixture, senderId: nil, decision: .wheelDisabled)
+        try assertTracedScroll(fixture, senderId: 0x638, decision: .wheelDisabled)
+
+        sendFrame(fixture, phase: .began, fingers: 2, x: 0.5, y: 0.5, at: 101)
+        let freshContact = try assertTracedScroll(fixture, decision: .wheelDisabled)
+        XCTAssertTrue(freshContact.contains("retained=none retainedCurrent=none"))
+        let trace = recorder.dump()
+        let retained = try XCTUnwrap(trace.range(of: "ownership action=retain contact=1:0:1:1591"))
+        let releasedGesture = try XCTUnwrap(trace.range(of: "gesture timestamp=100.03"))
+        let retired = try XCTUnwrap(trace.range(
+            of: "ownership action=retire contact=1:0:1:1591 generation=1 currentSession=2"
+        ))
+        let freshGesture = try XCTUnwrap(trace.range(of: "gesture timestamp=101.0"))
+        XCTAssertLessThan(retained.lowerBound, releasedGesture.lowerBound)
+        XCTAssertLessThan(releasedGesture.lowerBound, retired.lowerBound)
+        XCTAssertLessThan(retired.lowerBound, freshGesture.lowerBound)
+    }
+
+    func testScrollTraceReportsWheelBindingAndInputSuppressionReturns() throws {
+        let fixture = try makeFixture(scrollGestureEnabled: true)
+        let recorder = TrackpadScrollTrace.shared
+        recorder.beginCapture()
+        defer {
+            recorder.endCapture()
+            recorder.releaseStorage()
+        }
+        let requiredModifiers = fixture.controller.settings.gestures.scrollModifierKey.cgEventFlag.rawValue
+        try assertTracedScroll(
+            fixture, modifiersRawValue: requiredModifiers, isContinuous: false, decision: .wheelBinding
+        )
+        try assertTracedScroll(
+            fixture, modifiersRawValue: requiredModifiers ^ CGEventFlags.maskShift.rawValue,
+            isContinuous: false, decision: .modifierMismatch
+        )
+        fixture.controller.isLockScreenActive = true
+        try assertTracedScroll(fixture, phase: CGScrollPhase.changed.rawValue, decision: .inputSuppressed)
+        sendFrame(fixture, phase: .began, fingers: 3, x: 0.5, y: 0.2, at: 100)
+        let gesture = try XCTUnwrap(recorder.dump().split(separator: "\n").last)
+        XCTAssertTrue(gesture.contains("gesture timestamp=100.0"))
+        XCTAssertTrue(gesture.contains("processed=false"))
+    }
+
+    @discardableResult
+    private func assertTracedScroll(
+        _ fixture: Fixture,
+        momentumPhase: UInt32 = 0,
+        phase: UInt32 = 0,
+        senderId: UInt64? = 0x637,
+        modifiersRawValue: UInt64 = 0,
+        isContinuous: Bool = true,
+        decision: MouseEventHandler.ScrollDecision,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> String {
+        let suppressed = fixture.controller.mouseEventHandler.receiveTapScrollWheel(MouseScrollIntake(
+            location: CGPoint(x: 800, y: 450), deltaX: 0, deltaY: 8,
+            momentumPhase: momentumPhase, phase: phase, modifiersRawValue: modifiersRawValue,
+            isContinuous: isContinuous, senderId: senderId
+        ))
+        XCTAssertEqual(suppressed, decision.suppresses, file: file, line: line)
+        let record = try XCTUnwrap(
+            TrackpadScrollTrace.shared.dump().split(separator: "\n").last,
+            file: file, line: line
+        )
+        XCTAssertTrue(record.contains(" scroll "), file: file, line: line)
+        XCTAssertTrue(
+            record.contains("suppressed=\(suppressed) reason=\(decision.rawValue)"),
+            file: file, line: line
+        )
+        return String(record)
+    }
+
     func testCommittedPartialLiftLatchesAndBlocksChainedGesture() throws {
         let fixture = try makeFixture(
             workspaceFingers: .three,

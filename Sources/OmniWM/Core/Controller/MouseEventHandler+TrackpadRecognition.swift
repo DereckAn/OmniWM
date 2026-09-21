@@ -179,6 +179,15 @@ extension MouseEventHandler {
         if context.overviewAction == .resume {
             _ = controller?.windowActionHandler.beginOverviewGesture()
         }
+        if let axis = context.workspaceAxis,
+           controller?.layoutRefreshController.workspaceSwipe.prepare(
+               monitorId: context.monitorId, timestamp: timestamp
+           ) == true
+        {
+            state.gesturePhase = .committed
+            state.activeGestureMode = .workspaceSwitch(axis: axis)
+            state.workspaceSwipeFired = true
+        }
     }
 
     private func resolveGestureArmContext(
@@ -272,7 +281,8 @@ extension MouseEventHandler {
                 state.gestureLastAverageY = average.y
                 return
             }
-            guard commitGestureMode(metrics: metrics, lockedContext: lockedContext) else { return }
+            guard commitGestureMode(metrics: metrics, lockedContext: lockedContext, timestamp: timestamp)
+            else { return }
         }
 
         state.gestureLastAverageX = average.x
