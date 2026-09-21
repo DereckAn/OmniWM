@@ -1929,7 +1929,6 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.ended.rawValue))
         XCTAssertTrue(handler.state.suppressTrackpadMomentumScroll)
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 1, phase: 0))
-        // A mayBegin event can arrive between momentum events after every finger has lifted.
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.mayBegin.rawValue))
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 2, phase: 0))
         XCTAssertTrue(scrollVerdict(fixture, momentumPhase: 0, phase: CGScrollPhase.changed.rawValue))

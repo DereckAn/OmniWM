@@ -13,7 +13,6 @@ final class OverviewScrollInputTests: XCTestCase {
             deltaX: 15, deltaY: -60, modifiers: [], isPrecise: true, location: .zero,
             phase: .began
         )
-        // Captured after finger tracking ended, while the release animation was still opening.
         XCTAssertTrue(gate.consumes(event, state: .opening))
         for phase: NSEvent.Phase in [.changed, .ended] {
             event.phase = phase

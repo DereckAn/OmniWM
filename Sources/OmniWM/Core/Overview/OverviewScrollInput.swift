@@ -35,7 +35,6 @@ enum OverviewScrollInput {
 
         mutating func consumes(_ event: Event, state: OverviewState) -> Bool {
             guard event.isPrecise, awaitingNewGesture else { return false }
-            // A delayed began can belong to the opening swipe after tracking has ended.
             if state.isAnimating { return true }
             if event.phase.contains(.began), event.momentumPhase.isEmpty {
                 awaitingNewGesture = false
