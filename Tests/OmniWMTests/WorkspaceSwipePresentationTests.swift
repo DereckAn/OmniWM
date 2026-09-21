@@ -8,6 +8,63 @@ import XCTest
 
 @MainActor
 final class WorkspaceSwipePresentationTests: XCTestCase {
+    func testSingleRecognitionFrameFlickCommitsForEitherInputSign() throws {
+        for cumulative in [-180.0, 180.0] {
+            let (controller, swipe, monitor, source) = try fixture()
+            _ = swipe.prepare(monitorId: monitor.id, timestamp: 1)
+            swipe.begin(
+                axis: .horizontal, cumulative: cumulative, timestamp: 1.03,
+                recognitionMovement: SwipeEvent(delta: cumulative, timestamp: 1)
+            )
+            let flight = try XCTUnwrap(swipe.flight)
+            XCTAssertEqual(flight.progress, 0)
+            XCTAssertEqual(controller.workspaceManager.activeWorkspace(on: monitor.id)?.id, source)
+            XCTAssertTrue(swipe.release(timestamp: 1.04, allowFlick: true))
+            XCTAssertEqual(flight.motion.target, 1)
+            swipe.tick(displayId: monitor.displayId, timestamp: 3)
+            XCTAssertEqual(controller.workspaceManager.activeWorkspace(on: monitor.id)?.id, flight.destination.id)
+            swipe.didSubmitPlacement()
+            XCTAssertFalse(swipe.hasPresentation)
+        }
+    }
+
+    func testBothInputAxesAnimateVerticallyWithConfiguredDestinationDirection() throws {
+        for axis in WorkspaceSwipeAxis.allCases {
+            for inverted in [false, true] {
+                for cumulative in [-20.0, 20.0] {
+                    let (controller, swipe, monitor, source) = try fixture()
+                    let third = try XCTUnwrap(controller.workspaceManager.workspaceId(for: "3", createIfMissing: true))
+                    controller.workspaceManager.assignWorkspaceToMonitor(third, monitorId: monitor.id)
+                    controller.settings.gestures.invertDirection = inverted
+                    _ = swipe.prepare(monitorId: monitor.id, timestamp: 1)
+                    swipe.begin(axis: axis, cumulative: cumulative, timestamp: 1.01)
+                    let flight = try XCTUnwrap(swipe.flight)
+                    let next = axis == .vertical ? (inverted == (cumulative > 0)) : (inverted == (cumulative < 0))
+                    let expected = next
+                        ? controller.workspaceManager.nextWorkspaceInOrder(
+                            on: monitor.id,
+                            from: source,
+                            wrapAround: true
+                        )
+                        : controller.workspaceManager.previousWorkspaceInOrder(
+                            on: monitor.id,
+                            from: source,
+                            wrapAround: true
+                        )
+                    XCTAssertEqual(flight.destination.id, expected?.id)
+                    XCTAssertTrue(swipe.update(cumulative: cumulative * 8.5, timestamp: 1.1))
+                    let distance = monitor.visibleFrame.height * 1.1 / 2
+                    XCTAssertEqual(flight.progress, 0.5, accuracy: 0.000001)
+                    XCTAssertEqual(flight.offset(destination: false).dx, 0)
+                    XCTAssertEqual(flight.offset(destination: true).dx, 0)
+                    XCTAssertEqual(flight.offset(destination: false).dy, next ? distance : -distance)
+                    XCTAssertEqual(flight.offset(destination: true).dy, next ? -distance : distance)
+                    swipe.cancel(reason: "test-complete")
+                }
+            }
+        }
+    }
+
     func testPreviewTrackingKeepsWorkspaceUntilReleaseSettles() throws {
         let (controller, swipe, monitor, source) = try fixture()
         let next = try XCTUnwrap(controller.workspaceManager.nextWorkspaceInOrder(
