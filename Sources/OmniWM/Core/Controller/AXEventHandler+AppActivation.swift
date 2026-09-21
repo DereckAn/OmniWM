@@ -219,6 +219,7 @@ extension AXEventHandler {
         case .focusedWindowChanged:
             return true
         case .workspaceDidActivateApplication,
+             .workspaceDidUnhideApplication,
              .cgsFrontAppChanged:
             return origin == .external || origin == .appTerminationProbe
         }

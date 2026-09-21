@@ -107,7 +107,7 @@ final class EventInterpreter: EventIntakeSink {
         )
         switch visibility {
         case .hidden: controller.axEventHandler.handleAppHidden(pid: pid, source: .service)
-        case .visible: controller.axEventHandler.handleAppUnhidden(pid: pid, source: .service)
+        case .visible: controller.axEventHandler.handleNativeAppUnhide(pid: pid)
         }
     }
 

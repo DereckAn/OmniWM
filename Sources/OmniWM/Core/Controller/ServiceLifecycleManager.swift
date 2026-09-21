@@ -7,6 +7,7 @@ import Foundation
 enum ActivationEventSource: String, Sendable {
     case focusedWindowChanged
     case workspaceDidActivateApplication
+    case workspaceDidUnhideApplication
     case cgsFrontAppChanged
 
     var isAuthoritative: Bool {

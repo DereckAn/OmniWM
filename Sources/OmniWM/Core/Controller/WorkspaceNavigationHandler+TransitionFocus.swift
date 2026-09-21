@@ -41,6 +41,7 @@ extension WorkspaceNavigationHandler {
             controller.intentLedger.discardPendingFocus(canceledRequest.token)
         }
         _ = controller.workspaceManager.clearNativeFocusOwner()
+        controller.windowFocusOperations.activateApp(getpid())
     }
 
     func commitWorkspaceTransitionFocusHandoff(

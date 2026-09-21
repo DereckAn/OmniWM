@@ -939,7 +939,14 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
     }
 
     func testEmptyWorkspaceTargetClearsManagedFocusAfterLayout() throws {
-        let fixture = try makeFixture()
+        var activatedPIDs: [pid_t] = []
+        let fixture = try makeFixture(
+            windowFocusOperations: WindowFocusOperations(
+                activateApp: { activatedPIDs.append($0) },
+                focusSpecificWindow: { _, _, _ in },
+                raiseWindow: { _ in }
+            )
+        )
         let manager = fixture.controller.workspaceManager
         XCTAssertFalse(manager.nativeFocusOwner.isExternal)
 
@@ -949,16 +956,25 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
                 fixture.controller.layoutRefreshController.layoutState.pendingRefresh?.postLayoutActions.first
             )
             XCTAssertTrue(action.isCurrent(using: manager))
+            XCTAssertTrue(activatedPIDs.isEmpty)
             action.runIfCurrent(using: manager)
 
             XCTAssertEqual(activeWorkspace(fixture), fixture.ws2)
             XCTAssertEqual(manager.nativeFocusOwner, .none)
             XCTAssertNil(manager.pendingFocusedToken)
+            XCTAssertEqual(activatedPIDs, [getpid()])
         }
     }
 
     func testEmptyWorkspaceTargetClearsManagedFocusWhenLayoutIsInvalidated() throws {
-        let fixture = try makeFixture()
+        var activatedPIDs: [pid_t] = []
+        let fixture = try makeFixture(
+            windowFocusOperations: WindowFocusOperations(
+                activateApp: { activatedPIDs.append($0) },
+                focusSpecificWindow: { _, _, _ in },
+                raiseWindow: { _ in }
+            )
+        )
         let manager = fixture.controller.workspaceManager
         let token = addManagedWindow(to: fixture.ws1, controller: fixture.controller, pid: 7_010, windowId: 7_110)
         XCTAssertTrue(manager.confirmManagedFocus(token, in: fixture.ws1, activateWorkspaceOnMonitor: false))
@@ -976,14 +992,16 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
             XCTAssertEqual(activeWorkspace(fixture), fixture.ws2)
             XCTAssertEqual(manager.nativeFocusOwner, .none)
             XCTAssertNil(manager.pendingFocusedToken)
+            XCTAssertEqual(activatedPIDs, [getpid()])
         }
     }
 
     func testRapidSwipeThroughEmptyWorkspaceRejectsStaleClear() throws {
+        var activatedPIDs: [pid_t] = []
         var focusedWindowIds: [UInt32] = []
         let fixture = try makeFixture(
             windowFocusOperations: WindowFocusOperations(
-                activateApp: { _ in },
+                activateApp: { activatedPIDs.append($0) },
                 focusSpecificWindow: { _, windowId, _ in focusedWindowIds.append(windowId) },
                 raiseWindow: { _ in }
             )
@@ -1012,6 +1030,7 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
             XCTAssertEqual(focusedWindowIds, [UInt32(ws3Token.windowId)])
             XCTAssertEqual(manager.pendingFocusedToken, ws3Token)
             XCTAssertEqual(manager.nativeFocusOwner, .managed(ws1Token))
+            XCTAssertFalse(activatedPIDs.contains(getpid()))
         }
     }
 

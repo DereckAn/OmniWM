@@ -18,6 +18,7 @@ final class InvalidActivationPIDTests: XCTestCase {
         }
         let sources: [ActivationEventSource] = [
             .workspaceDidActivateApplication,
+            .workspaceDidUnhideApplication,
             .cgsFrontAppChanged,
             .focusedWindowChanged
         ]

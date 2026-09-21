@@ -75,6 +75,16 @@ extension AXEventHandler {
         controller.surfaceReconciler.noteWorldChanged()
     }
 
+    func handleNativeAppUnhide(pid: pid_t) {
+        guard let controller else { return }
+        let shouldFollowActivation = controller.workspaceManager.isAppHidden(pid: pid)
+            && controller.intentLedger.openAppRevealFocusIntent(pid: pid) == nil
+        handleAppUnhidden(pid: pid, source: .service)
+        if shouldFollowActivation {
+            handleAppActivation(pid: pid, source: .workspaceDidUnhideApplication)
+        }
+    }
+
     func handleAppUnhidden(pid: pid_t, source: WMEventSource = .ax) {
         guard let controller = acceptAppVisibilityChange(hidden: false, pid: pid, source: source) else { return }
         let entries = controller.workspaceManager.entries(forPid: pid)
