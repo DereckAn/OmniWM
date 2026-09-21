@@ -20,8 +20,8 @@ final class TrackpadPhysicalTraceTests: XCTestCase {
         offer(mailbox, fingers: 0, timestamp: 1.04)
 
         let deliveries = mailbox.take().deliveries
-        XCTAssertEqual(deliveries.map(\.kind), [.began, .changed, .ended])
-        XCTAssertEqual(deliveries.map(\.frame.touches.count), [3, 3, 0])
+        XCTAssertEqual(deliveries.map(\.kind), [.began, .changed, .changed, .ended])
+        XCTAssertEqual(deliveries.map(\.frame.touches.count), [3, 2, 3, 0])
         XCTAssertEqual(traceDetails, [
             "physical generation=7 slot=0 session=1 timestamp=1.0 fingers=3",
             "physical generation=7 slot=0 session=1 timestamp=1.01 fingers=2",

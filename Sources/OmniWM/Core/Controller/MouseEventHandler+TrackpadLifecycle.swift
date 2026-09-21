@@ -48,7 +48,11 @@ extension MouseEventHandler {
         if case let .workspaceSwitch(axis) = mode {
             controller.layoutRefreshController.workspaceSwipe.begin(
                 axis: axis, cumulative: axis == .horizontal ? metrics.cumulativeX : metrics.cumulativeY,
-                timestamp: timestamp
+                timestamp: timestamp,
+                recognitionMovement: SwipeEvent(
+                    delta: Double(axis == .horizontal ? metrics.rawDeltaX : metrics.rawDeltaY),
+                    timestamp: metrics.previousTimestamp
+                )
             )
             if controller.layoutRefreshController.workspaceSwipe.hasPresentation { state.workspaceSwipeFired = true }
         } else {
@@ -144,7 +148,10 @@ extension MouseEventHandler {
         if overviewGestureInteractive {
             controller.windowActionHandler.updateOverviewGesture(
                 cumulativeUnits: Double(metrics.cumulativeY),
-                timestamp: timestamp
+                timestamp: timestamp,
+                recognitionMovement: action == .resume ? nil : SwipeEvent(
+                    delta: Double(metrics.rawDeltaY), timestamp: metrics.previousTimestamp
+                )
             )
             return
         }
@@ -395,6 +402,7 @@ extension MouseEventHandler {
         state.gestureStartY = 0.0
         state.gestureLastAverageX = 0.0
         state.gestureLastAverageY = 0.0
+        state.gestureLastTimestamp = 0
         state.lockedGestureContext = nil
         state.activeGestureMode = nil
         state.gestureFingerCountMismatchSince = nil

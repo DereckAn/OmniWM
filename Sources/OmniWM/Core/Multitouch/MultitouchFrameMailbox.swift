@@ -190,7 +190,7 @@ final class MultitouchFrameMailbox: @unchecked Sendable {
             return enqueue(.ended, frame, generation: generation, slot: slot, in: &value)
         }
         value.ownerTimestamp = frame.timestamp
-        if value.pending.last?.kind == .changed {
+        if value.pending.last?.kind == .changed, value.pending.last?.frame.touches.count == frame.touches.count {
             value.pending[value.pending.count - 1] = Delivery(
                 frame: frame,
                 generation: generation,

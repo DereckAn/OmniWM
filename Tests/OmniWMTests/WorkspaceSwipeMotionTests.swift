@@ -5,6 +5,56 @@
 import XCTest
 
 final class WorkspaceSwipeMotionTests: XCTestCase {
+    func testRecognitionMovementCommitsSingleFrameFlickWithoutProgressJump() {
+        let motion = WorkspaceSwipeMotion(
+            cumulativeUnits: 180, timestamp: 1.03,
+            recognitionMovement: SwipeEvent(delta: 180, timestamp: 1)
+        )
+
+        XCTAssertEqual(motion.progress(at: 1.03), 0)
+        XCTAssertEqual(motion.velocity(at: 1.03), 20, accuracy: 0.000001)
+        XCTAssertTrue(motion.release(timestamp: 1.04, allowFlick: true, animationTime: 100))
+        XCTAssertEqual(motion.target, 1)
+        XCTAssertEqual(motion.velocity(at: 100), 15, accuracy: 0.000001)
+    }
+
+    func testSlowRecognitionUsesRecentMovementInsteadOfWholeContactDisplacement() {
+        let motion = WorkspaceSwipeMotion(
+            cumulativeUnits: 20, timestamp: 2,
+            recognitionMovement: SwipeEvent(delta: 2, timestamp: 1.95)
+        )
+
+        XCTAssertEqual(motion.velocity(at: 2), 2.0 / 15, accuracy: 0.000001)
+        XCTAssertTrue(motion.release(timestamp: 2.01, allowFlick: true, animationTime: 100))
+        XCTAssertEqual(motion.target, 0)
+        XCTAssertTrue(motion.isComplete(at: 100))
+    }
+
+    func testRecognitionVelocityExpiresWithItsStartingSample() {
+        for releaseTime in [1.16, 1.30] {
+            let motion = WorkspaceSwipeMotion(
+                cumulativeUnits: 20, timestamp: 1.1,
+                recognitionMovement: SwipeEvent(delta: 20, timestamp: 1)
+            )
+
+            XCTAssertTrue(motion.release(timestamp: releaseTime, allowFlick: true, animationTime: 100))
+            XCTAssertEqual(motion.target, 0)
+            XCTAssertEqual(motion.velocity(at: 100), 0)
+        }
+    }
+
+    func testInvalidRecognitionIntervalDoesNotSeedVelocity() {
+        for previousTime in [Double.nan, -Double.infinity, 1, 1.1] {
+            let motion = WorkspaceSwipeMotion(
+                cumulativeUnits: 180, timestamp: 1,
+                recognitionMovement: SwipeEvent(delta: 180, timestamp: previousTime)
+            )
+            XCTAssertEqual(motion.velocity(at: 1), 0)
+            motion.release(timestamp: 1.01, allowFlick: true, animationTime: 100)
+            XCTAssertEqual(motion.target, 0)
+        }
+    }
+
     func testTrackingStartsAtRecognitionBaselineAndFollowsFinger() {
         let motion = WorkspaceSwipeMotion(cumulativeUnits: 24, timestamp: 1)
 

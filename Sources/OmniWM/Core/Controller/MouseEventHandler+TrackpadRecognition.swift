@@ -12,6 +12,7 @@ extension MouseEventHandler {
         var cumulativeY: CGFloat
         var rawDeltaX: CGFloat
         var rawDeltaY: CGFloat
+        var previousTimestamp: TimeInterval
     }
 
     func handleGestureEvent(_ snapshot: GestureEventSnapshot) {
@@ -175,6 +176,7 @@ extension MouseEventHandler {
         state.gestureStartY = average.y
         state.gestureLastAverageX = average.x
         state.gestureLastAverageY = average.y
+        state.gestureLastTimestamp = timestamp
         state.gesturePhase = .armed
         if context.overviewAction == .resume {
             _ = controller?.windowActionHandler.beginOverviewGesture()
@@ -260,7 +262,8 @@ extension MouseEventHandler {
             cumulativeX: (average.x - state.gestureStartX) * GestureEventSnapshot.normalizedPositionToGestureUnits,
             cumulativeY: (average.y - state.gestureStartY) * GestureEventSnapshot.normalizedPositionToGestureUnits,
             rawDeltaX: (average.x - state.gestureLastAverageX) * GestureEventSnapshot.normalizedPositionToGestureUnits,
-            rawDeltaY: (average.y - state.gestureLastAverageY) * GestureEventSnapshot.normalizedPositionToGestureUnits
+            rawDeltaY: (average.y - state.gestureLastAverageY) * GestureEventSnapshot.normalizedPositionToGestureUnits,
+            previousTimestamp: state.gestureLastTimestamp
         )
 
         if let axis = lockedContext.workspaceAxis,
@@ -279,6 +282,7 @@ extension MouseEventHandler {
             guard distanceSquared >= thresholdSquared else {
                 state.gestureLastAverageX = average.x
                 state.gestureLastAverageY = average.y
+                state.gestureLastTimestamp = timestamp
                 return
             }
             guard commitGestureMode(metrics: metrics, lockedContext: lockedContext, timestamp: timestamp)
@@ -287,6 +291,7 @@ extension MouseEventHandler {
 
         state.gestureLastAverageX = average.x
         state.gestureLastAverageY = average.y
+        state.gestureLastTimestamp = timestamp
         dispatchCommittedGestureFrame(
             metrics: metrics,
             lockedContext: lockedContext,

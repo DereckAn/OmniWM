@@ -117,8 +117,12 @@ final class WindowActionHandler {
         return overviewController.beginInteractiveTransition()
     }
 
-    func updateOverviewGesture(cumulativeUnits: Double, timestamp: TimeInterval) {
-        overviewControllerStorage?.updateInteractiveTransition(cumulativeUnits: cumulativeUnits, timestamp: timestamp)
+    func updateOverviewGesture(
+        cumulativeUnits: Double, timestamp: TimeInterval, recognitionMovement: SwipeEvent? = nil
+    ) {
+        overviewControllerStorage?.updateInteractiveTransition(
+            cumulativeUnits: cumulativeUnits, timestamp: timestamp, recognitionMovement: recognitionMovement
+        )
     }
 
     func endOverviewGesture(timestamp: TimeInterval?) {

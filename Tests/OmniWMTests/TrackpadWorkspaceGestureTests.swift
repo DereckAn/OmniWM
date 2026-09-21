@@ -327,6 +327,62 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
         else { return XCTFail("Expected a flick to commit from low progress") }
     }
 
+    func testSingleFrameOverviewFlickSurvivesCoalescedPartialLift() throws {
+        let fixture = try makeInteractiveOverviewFixture()
+        let actions = fixture.controller.windowActionHandler
+        defer { dismissInteractiveOverview(fixture) }
+        let mailbox = MultitouchFrameMailbox()
+        mailbox.activate(generation: 1)
+        for (fingers, y, timestamp): (Int, Float, Double) in [
+            (4, 0.2, 100), (4, 0.24, 100.01), (4, 0.56, 100.03), (3, 0.56, 100.04), (0, 0, 100.05)
+        ] {
+            _ = mailbox.offer(
+                .init(touches: Array(repeating: .init(x: 0.5, y: y), count: fingers), timestamp: timestamp),
+                generation: 1, slot: 0
+            )
+        }
+        let deliveries = mailbox.take().deliveries
+        XCTAssertEqual(deliveries.map(\.frame.touches.count), [4, 4, 3, 0])
+        for delivery in deliveries {
+            let phase: NSEvent.Phase = switch delivery.kind {
+            case .began: .began
+            case .changed: .changed
+            case .ended: .ended
+            case .cancelled: .cancelled
+            }
+            sendFrame(
+                fixture, phase: phase, fingers: delivery.frame.touches.count,
+                x: 0.5, y: CGFloat(delivery.frame.touches.first?.y ?? 0), at: delivery.frame.timestamp
+            )
+            if delivery.frame.timestamp == 100.03 {
+                XCTAssertTrue(actions.isOverviewGestureActive)
+                XCTAssertEqual(actions.overviewTransitionProgress, 0)
+            }
+        }
+        XCTAssertFalse(actions.isOverviewGestureActive)
+        guard case .opening = actions.overviewState else { return XCTFail("Expected the single-frame flick to open") }
+    }
+
+    func testOverviewRecognitionAfterHoldUsesLastValidSample() throws {
+        for (recognitionY, shouldOpen): (CGFloat, Bool) in [(0.234, false), (0.56, true)] {
+            let fixture = try makeInteractiveOverviewFixture()
+            let actions = fixture.controller.windowActionHandler
+            defer { dismissInteractiveOverview(fixture) }
+            sendFrame(fixture, phase: .began, fingers: 4, x: 0.5, y: 0.2, at: 100)
+            sendFrame(fixture, phase: .changed, fingers: 4, x: 0.5, y: 0.23, at: 100.95)
+            sendFrame(fixture, phase: .changed, fingers: 4, x: 0.5, y: recognitionY, at: 101)
+            XCTAssertTrue(actions.isOverviewGestureActive)
+            XCTAssertEqual(actions.overviewTransitionProgress, 0)
+            sendFrame(fixture, phase: .ended, fingers: 0, x: 0, y: 0, at: 101.01)
+            if shouldOpen {
+                guard case .opening = actions.overviewState
+                else { return XCTFail("Expected recent fast movement to open") }
+            } else {
+                guard case .closed = actions.overviewState else { return XCTFail("Expected slow movement to cancel") }
+            }
+        }
+    }
+
     func testSystemReduceMotionUsesDiscreteOverviewTrigger() throws {
         let fixture = try makeInteractiveOverviewFixture()
         fixture.controller.motionPolicy.systemReducesMotion = true

@@ -44,14 +44,20 @@ final class WorkspaceSwipePresentation {
             axis: WorkspaceSwipeAxis,
             cumulative: Double,
             isNext: Bool,
-            timestamp: TimeInterval
+            timestamp: TimeInterval,
+            recognitionMovement: SwipeEvent?
         ) {
             self.preparation = preparation
             self.destination = destination
             self.axis = axis
             inputSign = cumulative < 0 ? -1 : 1
             visualSign = axis == .vertical ? (isNext ? 1 : -1) : (isNext ? -1 : 1)
-            motion = WorkspaceSwipeMotion(cumulativeUnits: abs(cumulative), timestamp: timestamp)
+            motion = WorkspaceSwipeMotion(
+                cumulativeUnits: abs(cumulative), timestamp: timestamp,
+                recognitionMovement: recognitionMovement.map {
+                    SwipeEvent(delta: $0.delta * (cumulative < 0 ? -1 : 1), timestamp: $0.timestamp)
+                }
+            )
         }
 
         var stride: CGFloat {
@@ -122,7 +128,10 @@ final class WorkspaceSwipePresentation {
         return false
     }
 
-    func begin(axis: WorkspaceSwipeAxis, cumulative: Double, timestamp: TimeInterval) {
+    func begin(
+        axis: WorkspaceSwipeAxis, cumulative: Double, timestamp: TimeInterval,
+        recognitionMovement: SwipeEvent? = nil
+    ) {
         guard let controller, let preparation,
               controller.motionPolicy.animationsEnabled,
               let isNext = TrackpadGestureIntent.isNextWorkspace(
@@ -137,7 +146,8 @@ final class WorkspaceSwipePresentation {
             axis: axis,
             cumulative: cumulative,
             isNext: isNext,
-            timestamp: timestamp
+            timestamp: timestamp,
+            recognitionMovement: recognitionMovement
         )
         guard participantsAreCurrent(flight) else {
             trace("fallback-participants")

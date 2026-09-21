@@ -123,7 +123,7 @@ final class OverviewAnimator {
         controller?.presentProgress(progress)
     }
 
-    func track(cumulativeProgress: Double, timestamp: TimeInterval) {
+    func track(cumulativeProgress: Double, timestamp: TimeInterval, recognitionMovement: SwipeEvent? = nil) {
         guard var gesture, !gesture.released else { return }
         let origin: Double
         if let latched = gesture.origin {
@@ -131,8 +131,7 @@ final class OverviewAnimator {
         } else {
             origin = cumulativeProgress
             gesture.origin = origin
-            gesture.tracker.reset()
-            gesture.tracker.push(delta: 0, timestamp: timestamp)
+            gesture.tracker.seed(recognitionMovement, endingAt: timestamp)
         }
         let progress = OverviewNativeTransition.rubberBand(gesture.baseline + cumulativeProgress - origin)
         gesture.tracker.push(delta: progress - gesture.progress, timestamp: timestamp)
