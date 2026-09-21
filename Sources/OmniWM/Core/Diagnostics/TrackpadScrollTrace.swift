@@ -64,6 +64,7 @@ enum TrackpadScrollTrace {
         case source(generation: UInt, slot: Int, registryId: UInt64, senderId: UInt64?)
         case ownership(OwnershipAction, contact: MultitouchContactSession, generation: UInt, currentSession: UInt64?)
         case reset(generation: UInt)
+        case workspacePresentation(renderer: String, action: String, progress: Double)
     }
 
     struct Record: Sendable {
@@ -83,6 +84,8 @@ enum TrackpadScrollTrace {
 
     private static func format(_ record: Record) -> String {
         let detail: String = switch record.event {
+        case let .workspacePresentation(renderer, action, progress):
+            "workspace-presentation renderer=\(renderer) action=\(action) progress=\(progress)"
         case let .scroll(scroll):
             format(scroll)
         case let .gesture(gesture):

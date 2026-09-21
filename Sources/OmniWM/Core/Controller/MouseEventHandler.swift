@@ -146,6 +146,7 @@ final class MouseEventHandler {
     }
 
     func resetForMultitouchSourceReplacement() {
+        controller?.layoutRefreshController.workspaceSwipe.cancel(reason: "source-replaced")
         resetGestureState()
         state.workspaceSwipeTracker.reset()
         clearGestureLatches()

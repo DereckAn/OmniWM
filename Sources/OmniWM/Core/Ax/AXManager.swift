@@ -36,6 +36,7 @@ final class AXManager {
     let frameBatchBuffer = AXFrameBatchBuffer()
     let managedWindowBindings = AXManagedWindowBindings()
     let frameLedger = AXFrameApplicationLedger()
+    var workspaceFrameSettlement: AXFrameSettlement?
     private var pendingFrameRetryTasksByWindowId: [Int: Task<Void, Never>] = [:]
     private var pendingFrameRetryGenerationByWindowId: [Int: UInt64] = [:]
     private var pendingFrameRetryRequestsByWindowId: [Int: AXFrameRetryRequest] = [:]

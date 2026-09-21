@@ -248,6 +248,7 @@ extension WMController {
         if case .started = outcome, profile == .problem {
             seedWindowAdmissionTrace()
             mouseEventHandler.recordTrackpadTraceSnapshot()
+            layoutRefreshController.workspaceSwipe.trace("capture-start")
         }
         return outcome
     }
