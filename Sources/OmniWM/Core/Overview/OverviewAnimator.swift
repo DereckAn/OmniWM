@@ -132,6 +132,9 @@ final class OverviewAnimator {
             origin = cumulativeProgress
             gesture.origin = origin
             gesture.tracker.seed(recognitionMovement, endingAt: timestamp)
+            TrackpadScrollTrace.record(.overviewMotion(
+                action: "recognition", progress: gesture.progress, velocity: gesture.tracker.velocity()
+            ))
         }
         let progress = OverviewNativeTransition.rubberBand(gesture.baseline + cumulativeProgress - origin)
         gesture.tracker.push(delta: progress - gesture.progress, timestamp: timestamp)
@@ -151,7 +154,12 @@ final class OverviewAnimator {
         }
         gesture.released = true
         self.gesture = gesture
-        return OverviewNativeTransition.releaseTarget(progress: gesture.progress, velocity: gesture.velocity)
+        let target = OverviewNativeTransition.releaseTarget(progress: gesture.progress, velocity: gesture.velocity)
+        TrackpadScrollTrace.record(.overviewMotion(
+            action: timestamp == nil ? "cancelled" : "released", progress: gesture.progress,
+            velocity: gesture.velocity, target: target
+        ))
+        return target
     }
 
     func targetWindow() -> WindowHandle? {

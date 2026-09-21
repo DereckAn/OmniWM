@@ -64,7 +64,18 @@ enum TrackpadScrollTrace {
         case source(generation: UInt, slot: Int, registryId: UInt64, senderId: UInt64?)
         case ownership(OwnershipAction, contact: MultitouchContactSession, generation: UInt, currentSession: UInt64?)
         case reset(generation: UInt)
-        case workspacePresentation(renderer: String, action: String, progress: Double)
+        case recognition(mode: TrackpadGestureMode, x: Double, y: Double, dx: Double, dy: Double, interval: Double)
+        case termination(reason: String, required: Int, fingers: Int, held: Double)
+        case workspacePresentation(
+            renderer: String, action: String, progress: Double, velocity: Double? = nil,
+            projectedProgress: Double? = nil, target: Double? = nil, allowFlick: Bool? = nil
+        )
+        case workspaceFallback(cumulative: Double, velocity: Double, allowFlick: Bool, fired: Bool)
+        case overviewMotion(action: String, progress: Double, velocity: Double, target: Double? = nil)
+        case overviewScroll(
+            phase: UInt, momentum: UInt, precise: Bool, state: String, suppressed: Bool,
+            before: Double?, after: Double?
+        )
     }
 
     struct Record: Sendable {
@@ -84,8 +95,21 @@ enum TrackpadScrollTrace {
 
     private static func format(_ record: Record) -> String {
         let detail: String = switch record.event {
-        case let .workspacePresentation(renderer, action, progress):
+        case let .recognition(mode, x, y, dx, dy, interval):
+            "recognition mode=\(mode) x=\(x) y=\(y) dx=\(dx) dy=\(dy) interval=\(interval)"
+        case let .termination(reason, required, fingers, held):
+            "termination reason=\(reason) required=\(required) fingers=\(fingers) held=\(held)"
+        case let .workspacePresentation(renderer, action, progress, velocity, projected, target, allowFlick):
             "workspace-presentation renderer=\(renderer) action=\(action) progress=\(progress)"
+                + " velocity=\(decimal(velocity)) projected=\(decimal(projected)) target=\(decimal(target))"
+                + " allowFlick=\(allowFlick.map(String.init) ?? "none")"
+        case let .workspaceFallback(cumulative, velocity, allowFlick, fired):
+            "workspace-fallback cumulative=\(cumulative) velocityUnits=\(velocity) allowFlick=\(allowFlick) fired=\(fired)"
+        case let .overviewMotion(action, progress, velocity, target):
+            "overview-motion action=\(action) progress=\(progress) velocity=\(velocity) target=\(decimal(target))"
+        case let .overviewScroll(phase, momentum, precise, state, suppressed, before, after):
+            "overview-scroll phase=\(phase) momentum=\(momentum) precise=\(precise) state=\(state)"
+                + " suppressed=\(suppressed) offsetBefore=\(decimal(before)) offsetAfter=\(decimal(after))"
         case let .scroll(scroll):
             format(scroll)
         case let .gesture(gesture):
@@ -133,5 +157,9 @@ enum TrackpadScrollTrace {
 
     private static func number(_ number: UInt64?) -> String {
         number.map(String.init) ?? "none"
+    }
+
+    private static func decimal(_ value: Double?) -> String {
+        value.map { String($0) } ?? "none"
     }
 }

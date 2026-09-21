@@ -7,6 +7,35 @@ import XCTest
 
 @MainActor
 final class TrackpadScrollTraceTests: XCTestCase {
+    func testWorkspaceReleaseTraceRecordsTheActualDecision() throws {
+        let recorder = TrackpadScrollTrace.shared
+        recorder.beginCapture()
+        defer {
+            recorder.endCapture()
+            recorder.releaseStorage()
+        }
+        let motion = WorkspaceSwipeMotion(
+            cumulativeUnits: 180, timestamp: 1.03,
+            recognitionMovement: SwipeEvent(delta: 180, timestamp: 1)
+        )
+        XCTAssertTrue(motion.release(timestamp: 1.04, allowFlick: true, animationTime: 100))
+        let line = try XCTUnwrap(recorder.dump().split(separator: "\n").first {
+            $0.contains("workspace-presentation renderer=preview action=released")
+        })
+        let values = Dictionary(uniqueKeysWithValues: line.split(separator: " ").compactMap { field -> (
+            String,
+            String
+        )? in
+            let pair = field.split(separator: "=", maxSplits: 1)
+            return pair.count == 2 ? (String(pair[0]), String(pair[1])) : nil
+        })
+        XCTAssertEqual(try XCTUnwrap(values["velocity"].flatMap(Double.init)), 15, accuracy: 0.000001)
+        XCTAssertGreaterThan(try XCTUnwrap(values["projected"].flatMap(Double.init)), 0.5)
+        XCTAssertEqual(values["progress"], "0.0")
+        XCTAssertEqual(values["target"], "1.0")
+        XCTAssertEqual(values["allowFlick"], "true")
+    }
+
     func testInactiveTraceDoesNotEvaluateRecordsOrAllocateStorage() {
         let recorder = TrackpadScrollTrace.shared
         recorder.endCapture()

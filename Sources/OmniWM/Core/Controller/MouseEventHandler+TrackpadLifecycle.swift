@@ -43,6 +43,7 @@ extension MouseEventHandler {
             return false
         }
         MouseTrace.record("gesture: committed \(mode) with \(lockedContext.fingerCount) fingers")
+        metrics.traceRecognition(mode, timestamp: timestamp)
         state.activeGestureMode = mode
         state.gesturePhase = .committed
         if case let .workspaceSwitch(axis) = mode {
@@ -237,6 +238,16 @@ extension MouseEventHandler {
             .release(timestamp: timestamp, allowFlick: allowFlick) == true
         {
             return
+        }
+        defer {
+            TrackpadScrollTrace.record(.workspaceFallback(
+                cumulative: Double((axis == .horizontal
+                        ? state.gestureLastAverageX - state.gestureStartX
+                        : state.gestureLastAverageY - state.gestureStartY)
+                    * GestureEventSnapshot.normalizedPositionToGestureUnits),
+                velocity: state.workspaceSwipeTracker.velocity(), allowFlick: allowFlick,
+                fired: state.workspaceSwipeFired
+            ))
         }
         guard allowFlick, !state.workspaceSwipeFired else { return }
         state.workspaceSwipeTracker.push(delta: 0, timestamp: timestamp)

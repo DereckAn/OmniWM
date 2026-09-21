@@ -68,6 +68,10 @@ final class WorkspaceSwipeMotion {
         let velocity = allowFlick ? tracker.velocity() : 0
         let projected = trackedProgress - velocity / Self.projectionDecay
         let destination = allowFlick && projected >= 0.5 ? 1.0 : 0.0
+        TrackpadScrollTrace.record(.workspacePresentation(
+            renderer: "preview", action: "released", progress: trackedProgress, velocity: velocity,
+            projectedProgress: projected, target: destination, allowFlick: allowFlick
+        ))
         target = destination
         lastTimestamp = timestamp
         spring = SpringAnimation(

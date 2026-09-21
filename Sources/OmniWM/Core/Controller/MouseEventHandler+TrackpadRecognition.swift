@@ -13,6 +13,13 @@ extension MouseEventHandler {
         var rawDeltaX: CGFloat
         var rawDeltaY: CGFloat
         var previousTimestamp: TimeInterval
+
+        func traceRecognition(_ mode: TrackpadGestureMode, timestamp: TimeInterval) {
+            TrackpadScrollTrace.record(.recognition(
+                mode: mode, x: Double(cumulativeX), y: Double(cumulativeY),
+                dx: Double(rawDeltaX), dy: Double(rawDeltaY), interval: timestamp - previousTimestamp
+            ))
+        }
     }
 
     func handleGestureEvent(_ snapshot: GestureEventSnapshot) {
@@ -84,6 +91,9 @@ extension MouseEventHandler {
                 return
             }
             MouseTrace.record("gesture: \(requiredFingers) -> \(activeTouchCount) fingers, ending")
+            TrackpadScrollTrace.record(.termination(
+                reason: "finger-count", required: requiredFingers, fingers: activeTouchCount, held: held
+            ))
             if activeTouchCount < requiredFingers {
                 finalizeCommittedGestureAfterTouchRelease(timestamp: snapshot.timestamp)
                 return
@@ -109,6 +119,11 @@ extension MouseEventHandler {
             return
         }
         let wasOverviewCandidate = state.lockedGestureContext?.overviewAction != nil
+        if state.gesturePhase == .armed {
+            TrackpadScrollTrace.record(.termination(
+                reason: "uncommitted-finger-count", required: requiredFingers, fingers: activeTouchCount, held: 0
+            ))
+        }
         abortActiveGestureIfNeeded()
         if wasOverviewCandidate {
             state.suppressGestureStartUntilAllTouchesLift = true

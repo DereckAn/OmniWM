@@ -187,7 +187,6 @@ final class WorkspaceSwipePresentation {
             cancel(reason: "invalid-release")
             return true
         }
-        trace("released", progress: flight.progress)
         flight.phase = .settling
         if refreshController?
             .displayLinkActivationForTests?(flight.preparation.monitor.displayId) == true { return true }
@@ -308,7 +307,9 @@ extension WorkspaceSwipePresentation {
         TrackpadScrollTrace.record(.workspacePresentation(
             renderer: "preview",
             action: action,
-            progress: progress
+            progress: progress,
+            velocity: flight?.motion.velocity(at: mediaTimeProvider()),
+            target: flight?.motion.target
         ))
     }
 }
