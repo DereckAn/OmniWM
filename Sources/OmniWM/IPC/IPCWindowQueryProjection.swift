@@ -90,8 +90,13 @@ struct IPCWindowQueryProjection {
             isScratchpad: IPCQuerySelection.include("is-scratchpad", in: fields) ? scratchpadIndex != nil : nil,
             scratchpadIndex: IPCQuerySelection.include("scratchpad-index", in: fields) ? scratchpadIndex?
                 .rawValue : nil,
-            hiddenReason: IPCQuerySelection.include("hidden-reason", in: fields) ? hiddenState
-                .map(IPCHiddenReason.init(hiddenState:)) : nil
+            hiddenReason: IPCQuerySelection.include("hidden-reason", in: fields) ? hiddenState.map { hiddenState in
+                IPCHiddenReason(
+                    hiddenState: hiddenState,
+                    isInactiveTabMember: hiddenState.offscreenSide != nil
+                        && controller.workspaceManager.isInactiveTabMember(entry.token, in: entry.workspaceId)
+                )
+            } : nil
         )
     }
 

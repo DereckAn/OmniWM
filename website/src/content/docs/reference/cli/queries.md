@@ -48,6 +48,17 @@ Field tokens are part of the CLI contract. Returned JSON still uses the payload 
 
 For windows, `is-visible` is true only when the workspace is visible, the window has no `hidden-reason`, its macOS application is not hidden, and WindowServer has not reported the window as ordered out. If the WindowServer ordered-in state is unavailable, the other visibility checks determine the result. The `--visible` selector uses the same conditions.
 
+`hidden-reason` selects the optional JSON field `hiddenReason`:
+
+| Value | Meaning |
+|-------|---------|
+| `workspace-inactive` | Parked for an inactive workspace. |
+| `tab-inactive` | Hidden as an inactive member of a Dwindle group or Niri tabbed column. |
+| `layout-transient` | Other layout-owned hiding, including Niri columns outside the viewport and active members awaiting reveal. |
+| `scratchpad` | Hidden by the scratchpad. |
+
+Workspace and scratchpad hiding retain their reasons. For other layout hiding, an inactive tab reports `tab-inactive` even when its column is also outside the viewport. An active member awaiting reveal keeps `layout-transient` until its hidden state clears. `hiddenReason` is omitted when no hidden state is recorded; `layout-transient` can persist in a settled layout and is not an animation-completion signal.
+
 `is-app-hidden` exposes the PID-scoped macOS hide state independently of `layout-reason` and `hidden-reason`; selecting `is-app-hidden` returns the JSON field `isAppHidden`.
 
 **Workspace fields:** `id`, `raw-name`, `display-name`, `number`, `layout`, `display`, `is-focused`, `is-visible`, `is-current`, `window-counts`, `focused-window-id`
