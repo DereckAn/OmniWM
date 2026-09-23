@@ -29,7 +29,7 @@ extension WMController {
         monitor: Monitor,
         captureGeometry: Bool = true
     ) -> Bool {
-        let logicalOnly = workspaceManager.isAppHidden(pid: entry.pid)
+        let logicalOnly = workspaceManager.isWindowSuppressedByMacOS(entry.token)
             || isManagedWindowSuspendedForNativeFullscreen(entry.token)
         if logicalOnly {
             guard let hiddenState = logicalScratchpadHiddenState(for: entry, monitor: monitor) else {
@@ -57,7 +57,7 @@ extension WMController {
         )
         if !parked,
            workspaceManager.hiddenState(for: entry.token) == nil,
-           !workspaceManager.isAppHidden(pid: entry.pid),
+           !workspaceManager.isWindowSuppressedByMacOS(entry.token),
            !isManagedWindowSuspendedForNativeFullscreen(entry.token)
         {
             axManager.unsuppressFrameWrites([(entry.pid, entry.windowId)])
@@ -149,7 +149,7 @@ extension WMController {
     func revealableScratchpadEntries(in index: ScratchpadIndex) -> [WindowState] {
         scratchpadEntries(in: index).filter { entry in
             !isManagedWindowSuspendedForNativeFullscreen(entry.token)
-                && !workspaceManager.isAppHidden(pid: entry.pid)
+                && !workspaceManager.isWindowSuppressedByMacOS(entry.token)
         }
     }
 
@@ -213,7 +213,7 @@ extension WMController {
     func hideRevealedScratchpad(_ index: ScratchpadIndex, fallbackMonitor: Monitor) {
         let entries = scratchpadEntries(in: index).filter { entry in
             workspaceManager.hiddenState(for: entry.token) == nil
-                || workspaceManager.isAppHidden(pid: entry.pid)
+                || workspaceManager.isWindowSuppressedByMacOS(entry.token)
                 || isManagedWindowSuspendedForNativeFullscreen(entry.token)
         }
         hideScratchpadMembers(entries, fallbackMonitor: fallbackMonitor)

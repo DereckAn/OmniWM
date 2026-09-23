@@ -78,7 +78,7 @@ extension WMController {
 
         let entries = members.filter { entry in
             !isManagedWindowSuspendedForNativeFullscreen(entry.token)
-                && !workspaceManager.isAppHidden(pid: entry.pid)
+                && !workspaceManager.isWindowSuppressedByMacOS(entry.token)
         }
         guard !entries.isEmpty else { return .notFound }
 

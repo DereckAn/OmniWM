@@ -50,7 +50,7 @@ extension WorkspaceNavigationHandler {
             : nil
         let candidates = controller.workspaceManager.tiledEntries(in: targetWorkspace.id)
             .compactMap { entry -> (token: WindowToken, frame: CGRect)? in
-                if controller.isManagedWindowSuppressedByMacOSHide(entry.token)
+                if controller.isManagedWindowSuppressedByMacOS(entry.token)
                     || dwindleEngine?.isInactiveGroupMember(entry.token, in: targetWorkspace.id) == true
                 {
                     return nil

@@ -136,7 +136,7 @@ extension LayoutRefreshController {
         let entries = controller.workspaceManager.tiledEntries(in: workspaceId)
         let excludedTokens = Set(
             entries.lazy
-                .filter { controller.workspaceManager.isAppHidden(pid: $0.pid) }
+                .filter { controller.workspaceManager.isWindowSuppressedByMacOS($0.token) }
                 .map(\.token)
         )
         let windows = buildWindowSnapshots(

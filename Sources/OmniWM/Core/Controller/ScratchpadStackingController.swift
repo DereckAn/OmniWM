@@ -161,7 +161,7 @@ final class ScratchpadStackingController {
               let entry = controller.workspaceManager.entry(for: handle),
               entry.workspaceId == plan.workspaceId,
               controller.workspaceManager.hiddenState(for: handle.id) == nil,
-              !controller.workspaceManager.isAppHidden(pid: entry.pid),
+              !controller.workspaceManager.isWindowSuppressedByMacOS(entry.token),
               !controller.isManagedWindowSuspendedForNativeFullscreen(handle.id)
         else {
             return nil

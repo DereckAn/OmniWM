@@ -150,7 +150,7 @@ extension WMController {
 
         for entry in workspaceManager.allFloatingEntries() {
             guard entry.layoutReason == .standard else { continue }
-            guard !workspaceManager.isAppHidden(pid: entry.pid) else { continue }
+            guard !workspaceManager.isWindowSuppressedByMacOS(entry.token) else { continue }
             guard visibleWorkspaceIds.contains(entry.workspaceId) else { continue }
             guard let targetMonitor = workspaceManager.monitor(for: entry.workspaceId)
                 ?? monitorForInteraction()

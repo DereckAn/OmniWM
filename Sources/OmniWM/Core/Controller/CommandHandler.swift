@@ -211,7 +211,7 @@ final class CommandHandler {
 
         if let token = controller.workspaceManager.selectedManagedToken,
            let entry = controller.workspaceManager.entry(for: token),
-           !controller.workspaceManager.isAppHidden(pid: entry.pid)
+           !controller.workspaceManager.isWindowSuppressedByMacOS(entry.token)
         {
             let currentState = isFullscreen(entry.axRef)
             if currentState {
@@ -245,7 +245,7 @@ final class CommandHandler {
             ?? frontmostPid.flatMap { controller.axEventHandler.focusedWindowToken(for: $0) }
         guard let token = controller.workspaceManager.nativeFullscreenCommandTarget(frontmostToken: frontmostToken),
               let entry = controller.workspaceManager.entry(for: token),
-              !controller.workspaceManager.isAppHidden(pid: entry.pid)
+              !controller.workspaceManager.isWindowSuppressedByMacOS(entry.token)
         else {
             return
         }

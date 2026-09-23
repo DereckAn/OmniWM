@@ -59,7 +59,7 @@ final class AXManager {
     }
 
     var needsFrameWriteFiltering: Bool {
-        !macOSHiddenAppPIDs.isEmpty || nativeTitleBarDrag != nil
+        !macOSHiddenAppPIDs.isEmpty || !AppAXContextRegistry.minimizedWindowTokens.isEmpty || nativeTitleBarDrag != nil
     }
 
     func markAppHidden(_ pid: pid_t) {
@@ -108,6 +108,7 @@ final class AXManager {
                 ))
             )
             Task { @MainActor in
+                AppAXContextRegistry.clearMinimizedWindows(for: pid)
                 self?.managedWindowBindings.clearManagedWindowBindingRetry(for: pid)
                 self?.parkLedger.clearParkFrameState(for: pid, reason: "context-teardown")
                 if let context = AppAXContextRegistry.contexts[pid] {
@@ -247,6 +248,7 @@ final class AXManager {
 
     func removeWindowState(pid: pid_t, expectedWindow: AXWindowRef) {
         let windowId = expectedWindow.windowId
+        AppAXContextRegistry.setWindowMinimized(false, token: WindowToken(pid: pid, windowId: windowId))
         if nativeTitleBarDrag?.token == WindowToken(pid: pid, windowId: windowId) {
             nativeTitleBarDrag = nil
         }
@@ -260,6 +262,7 @@ final class AXManager {
     }
 
     func removeWindowLedgerState(pid: pid_t, windowId: Int) {
+        AppAXContextRegistry.setWindowMinimized(false, token: WindowToken(pid: pid, windowId: windowId))
         if nativeTitleBarDrag?.token == WindowToken(pid: pid, windowId: windowId) {
             nativeTitleBarDrag = nil
         }
@@ -291,6 +294,7 @@ final class AXManager {
 
     func garbageCollectContexts() {
         for (pid, context) in Array(AppAXContextRegistry.contexts) where context.nsApp.isTerminated {
+            AppAXContextRegistry.clearMinimizedWindows(for: pid)
             parkLedger.clearParkFrameState(for: pid, reason: "context-garbage-collected")
             context.destroy()
         }

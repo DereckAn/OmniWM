@@ -22,7 +22,7 @@ extension LayoutRefreshController {
 
         controller.axManager.markParkPending(for: entry.windowId, pid: entry.pid)
 
-        guard !controller.workspaceManager.isAppHidden(pid: entry.pid),
+        guard !controller.workspaceManager.isWindowSuppressedByMacOS(entry.token),
               !controller.axManager.macOSHiddenAppPIDs.contains(entry.pid),
               !controller.workspaceManager.spaceTopology.isWindowOnKnownInactiveSpace(entry.windowId)
         else { return }
@@ -42,7 +42,7 @@ extension LayoutRefreshController {
         deferringVisibleAXFor deferredTokens: Set<WindowToken> = []
     ) -> Set<WindowToken> {
         guard let controller, !plans.isEmpty else { return [] }
-        let plans = plans.filter { !controller.workspaceManager.isAppHidden(pid: $0.entry.pid) }
+        let plans = plans.filter { !controller.workspaceManager.isWindowSuppressedByMacOS($0.entry.token) }
         guard !plans.isEmpty else { return [] }
 
         var requiresVisibleAXTokens = controller.axManager.cancelParkFrameJobs(
@@ -78,10 +78,10 @@ extension LayoutRefreshController {
         animationTick: Bool
     ) {
         guard let controller, !plans.isEmpty else { return }
-        let plans = plans.filter { !controller.workspaceManager.isAppHidden(pid: $0.entry.pid) }
+        let plans = plans.filter { !controller.workspaceManager.isWindowSuppressedByMacOS($0.entry.token) }
         guard !plans.isEmpty else { return }
         let movablePlans = movablePlans.filter {
-            !controller.workspaceManager.isAppHidden(pid: $0.entry.pid)
+            !controller.workspaceManager.isWindowSuppressedByMacOS($0.entry.token)
         }
 
         if animationTick {

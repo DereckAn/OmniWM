@@ -60,7 +60,7 @@ final class OverviewWindowFacts {
         _ entry: WindowState,
         workspaceManager: WorkspaceManager
     ) -> Bool {
-        !workspaceManager.isAppHidden(pid: entry.pid)
+        !workspaceManager.isWindowSuppressedByMacOS(entry.token)
     }
 
     func isStructurallyMutable(_ entry: WindowState) -> Bool {

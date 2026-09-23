@@ -178,7 +178,8 @@ struct IPCWindowQueryProjection {
     ) -> Bool {
         guard visibleWorkspaceIds.contains(entry.workspaceId),
               hiddenState == nil,
-              !isAppHidden
+              !isAppHidden,
+              !entry.observedState.isMinimized
         else {
             return false
         }

@@ -32,9 +32,9 @@ extension WindowActionHandler {
         guard let controller,
               let anchorEntry = controller.workspaceManager.entry(for: anchorToken),
               anchorEntry.workspaceId == anchorWorkspaceId,
-              !controller.workspaceManager.isAppHidden(pid: anchorEntry.pid),
+              !controller.workspaceManager.isWindowSuppressedByMacOS(anchorEntry.token),
               let targetEntry = controller.workspaceManager.entry(for: handle),
-              !controller.workspaceManager.isAppHidden(pid: targetEntry.pid)
+              !controller.workspaceManager.isWindowSuppressedByMacOS(targetEntry.token)
         else {
             return false
         }

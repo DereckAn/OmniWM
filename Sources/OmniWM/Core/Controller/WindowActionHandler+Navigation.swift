@@ -47,7 +47,7 @@ extension WindowActionHandler {
               let handle = controller.workspaceManager.handle(for: token),
               let entry = controller.workspaceManager.entry(for: token),
               entry.workspaceId == workspaceId,
-              !controller.workspaceManager.isAppHidden(pid: entry.pid)
+              !controller.workspaceManager.isWindowSuppressedByMacOS(entry.token)
         else {
             return nil
         }
