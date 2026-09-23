@@ -77,6 +77,10 @@ struct HotkeyBindingRow: View {
             }
         }
         .accessibilityValue(accessibilityValue)
+        .onDisappear {
+            guard recordingTarget == .chord(binding.id) else { return }
+            onCancelRecording()
+        }
     }
 
     private var accessibilityValue: String {

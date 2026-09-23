@@ -36,7 +36,7 @@ struct SettingsView: View {
         .onChange(of: navigation.section) { _, newValue in
             selectedSection = newValue
         }
-        .task(id: selectedSection) {
+        .task {
             controller.refreshDiagnosticsIssues()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
