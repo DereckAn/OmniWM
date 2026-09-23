@@ -214,7 +214,10 @@ final class WorkspaceSwipePresentation {
         guard flight == nil else { return }
         preparation = nil
         preview?.stop()
-        if warm { warmPreviews() }
+        if warm {
+            refreshController?.collectUnusedWorkspacesIfIdle()
+            warmPreviews()
+        }
     }
 
     func cancel(reason: String) {
@@ -232,7 +235,10 @@ final class WorkspaceSwipePresentation {
         trace(reason, progress: flight.progress)
         controller?.surfaceReconciler.noteWorldChanged()
         refreshController?.stopDisplayLinkIfIdle(for: flight.preparation.monitor.displayId)
-        if reason == "completed" || reason == "placement-failed" || reason == "cancelled" { warmPreviews() }
+        if reason == "completed" || reason == "placement-failed" || reason == "cancelled" {
+            refreshController?.collectUnusedWorkspacesIfIdle()
+            warmPreviews()
+        }
     }
 
     func checkSettlement() {
