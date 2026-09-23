@@ -58,6 +58,8 @@ private let sponsors: [Sponsor] = [
     ),
     Sponsor(name: "b-allan-w", githubUsername: "b-allan-w", imageName: "b-allan-w", imageExtension: "png"),
     Sponsor(name: "cafe3310", githubUsername: "cafe3310", imageName: "cafe3310", imageExtension: "png"),
+    Sponsor(name: "Jose Paez", githubUsername: "regionativo", imageName: "regionativo", imageExtension: "jpg"),
+    Sponsor(name: "Petar Shomov", githubUsername: "pshomov", imageName: "pshomov", imageExtension: "jpg"),
     Sponsor(
         name: "Private Sponsor",
         githubUsername: nil,
