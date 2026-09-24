@@ -1458,6 +1458,76 @@ final class RuntimeArchitectureTests: XCTestCase {
     }
 
     @MainActor
+    func testScreenshotSelectionPausesAndResumesFocusFollowsMouse() throws {
+        var focusedTokens: [WindowToken] = []
+        let controller = Self.controller(
+            windowFocusOperations: WindowFocusOperations(
+                activateApp: { _ in },
+                focusSpecificWindow: { pid, windowId, _ in
+                    focusedTokens.append(WindowToken(pid: pid, windowId: Int(windowId)))
+                },
+                raiseWindow: { _ in }
+            )
+        )
+        let workspaceId = try XCTUnwrap(controller.workspaceManager.workspaceId(for: "1", createIfMissing: true))
+        _ = controller.workspaceManager.focusWorkspace(named: "1")
+        controller.setFocusFollowsMouse(true)
+        let monitor = try XCTUnwrap(controller.workspaceManager.monitor(for: workspaceId))
+        let source = controller.workspaceManager.addWindow(
+            AXWindowRef(element: AXUIElementCreateApplication(766_009), windowId: 766_109),
+            pid: 766_009,
+            windowId: 766_109,
+            to: workspaceId,
+            mode: .floating
+        )
+        let target = controller.workspaceManager.addWindow(
+            AXWindowRef(element: AXUIElementCreateApplication(766_010), windowId: 766_110),
+            pid: 766_010,
+            windowId: 766_110,
+            to: workspaceId,
+            mode: .floating
+        )
+        let targetFrame = CGRect(
+            x: monitor.visibleFrame.midX,
+            y: monitor.visibleFrame.midY,
+            width: 240,
+            height: 160
+        )
+        controller.workspaceManager.updateFloatingGeometry(frame: targetFrame, for: target)
+        XCTAssertTrue(controller.workspaceManager.confirmManagedFocus(
+            source,
+            in: workspaceId,
+            activateWorkspaceOnMonitor: false
+        ))
+        var selectionActive = true
+        var selectionChecks = 0
+        controller.focusPolicyEngine.screenshotSelectionActiveProvider = {
+            selectionChecks += 1
+            return selectionActive
+        }
+
+        controller.mouseEventHandler.dispatchMouseMoved(
+            at: targetFrame.center,
+            windowIdUnderPointer: target.windowId
+        )
+
+        XCTAssertTrue(focusedTokens.isEmpty)
+        XCTAssertNil(controller.intentLedger.activeManagedRequest)
+        XCTAssertEqual(controller.workspaceManager.selectedManagedToken, source)
+        XCTAssertEqual(selectionChecks, 1)
+
+        selectionActive = false
+        controller.mouseEventHandler.dispatchMouseMoved(
+            at: targetFrame.center,
+            windowIdUnderPointer: target.windowId
+        )
+
+        XCTAssertEqual(focusedTokens, [target])
+        XCTAssertEqual(controller.intentLedger.activeManagedRequest?.token, target)
+        XCTAssertEqual(selectionChecks, 2)
+    }
+
+    @MainActor
     func testFocusLockModifierSuppressesFocusFollowsMouseWhileHeld() throws {
         var focusedTokens: [WindowToken] = []
         let controller = Self.controller(
