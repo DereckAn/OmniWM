@@ -6,7 +6,7 @@ import Carbon
 import XCTest
 
 final class HotkeySettingsDisplayModelTests: XCTestCase {
-    func testAdvancedSearchMatchCountFindsReportedSizingCommands() {
+    func testSearchFindsAdvancedSizingCommands() {
         let ids = [
             "setContainerPrimarySpan.decrease10Percent",
             "setContainerPrimarySpan.increase10Percent",
@@ -15,46 +15,42 @@ final class HotkeySettingsDisplayModelTests: XCTestCase {
         ]
         let bindings = HotkeyBindingRegistry.defaults().filter { ids.contains($0.id) }
 
-        XCTAssertEqual(hiddenAdvancedMatchCount("increase", bindings: bindings), 2)
-        XCTAssertEqual(hiddenAdvancedMatchCount("decrease", bindings: bindings), 2)
+        XCTAssertEqual(
+            Set(searchIDs("increase", bindings: bindings)),
+            Set(["setContainerPrimarySpan.increase10Percent", "setWindowSecondarySpan.increase10Percent"])
+        )
+        XCTAssertEqual(
+            Set(searchIDs("decrease", bindings: bindings)),
+            Set(["setContainerPrimarySpan.decrease10Percent", "setWindowSecondarySpan.decrease10Percent"])
+        )
     }
 
-    func testAdvancedSearchMatchCountFindsMoveContainerCommandsByColumnID() {
+    func testSearchFindsAdvancedColumnCommands() {
         let ids = ["moveColumn.left", "moveColumn.right"]
         let bindings = HotkeyBindingRegistry.defaults().filter { ids.contains($0.id) }
 
-        XCTAssertEqual(hiddenAdvancedMatchCount("column", bindings: bindings), 2)
+        XCTAssertEqual(Set(searchIDs("column", bindings: bindings)), Set(ids))
     }
 
-    func testAdvancedSearchMatchCountUsesConfiguredShortcut() throws {
+    func testSearchFindsAdvancedCommandByConfiguredShortcut() throws {
         let shortcut = try XCTUnwrap(KeySymbolMapper.fromHumanReadable("Hyper+Minus"))
         let binding = try XCTUnwrap(HotkeyBindingRegistry.makeBinding(
             id: "setContainerPrimarySpan.decrease10Percent",
             binding: shortcut
         ))
 
-        XCTAssertEqual(
-            hiddenAdvancedMatchCount("hyper+minus", bindings: [binding]),
-            1
-        )
+        XCTAssertEqual(searchIDs("hyper+minus", bindings: [binding]), [binding.id])
     }
 
-    func testAdvancedSearchMatchCountExcludesNormalCommands() {
+    func testSearchIncludesNormalAndAdvancedCommands() {
         let ids = ["move.left", "moveColumn.left"]
         let bindings = HotkeyBindingRegistry.defaults().filter { ids.contains($0.id) }
 
         XCTAssertEqual(bindings.count, ids.count)
-        XCTAssertEqual(hiddenAdvancedMatchCount("left", bindings: bindings), 1)
+        XCTAssertEqual(Set(searchIDs("left", bindings: bindings)), Set(ids))
     }
 
-    func testAdvancedSearchMatchCountRequiresAQuery() {
-        XCTAssertEqual(
-            hiddenAdvancedMatchCount("  ", bindings: HotkeyBindingRegistry.defaults()),
-            0
-        )
-    }
-
-    func testVisibilityKeepsAdvancedCommandsBehindTheToggle() throws {
+    func testListShowsAdvancedCommandsAndExcludesUnassignableCommands() throws {
         let advanced = try XCTUnwrap(HotkeyBindingRegistry.makeBinding(id: "moveColumn.left", binding: .unassigned))
         let unavailable = HotkeyBinding(
             id: "consumeOrExpelWindowLeft",
@@ -62,22 +58,18 @@ final class HotkeySettingsDisplayModelTests: XCTestCase {
             trigger: .unassigned
         )
         let bindings = [advanced, unavailable]
-        let hidden = HotkeySettingsDisplayModel.search("", bindings: bindings, showsAdvancedHotkeys: false)
-        let shown = HotkeySettingsDisplayModel.search("", bindings: bindings, showsAdvancedHotkeys: true)
 
-        XCTAssertTrue(hidden.groups.isEmpty)
-        XCTAssertEqual(hidden.hiddenAdvancedMatchCount, 0)
-        XCTAssertEqual(shown.groups.flatMap(\.bindings).map(\.id), [advanced.id])
-        XCTAssertEqual(shown.hiddenAdvancedMatchCount, 0)
+        XCTAssertEqual(searchIDs("", bindings: bindings), [advanced.id])
+        XCTAssertEqual(searchIDs("   ", bindings: bindings), [advanced.id])
     }
 
     func testSearchPreservesCategoryAndBindingOrderAndOmitsEmptyGroups() {
         let bindings = Array(HotkeyBindingRegistry.defaults().reversed())
-        let results = HotkeySettingsDisplayModel.search("left", bindings: bindings, showsAdvancedHotkeys: true)
-        let categories = results.groups.map(\.category)
+        let groups = HotkeySettingsDisplayModel.search("left", bindings: bindings)
+        let categories = groups.map(\.category)
         XCTAssertEqual(categories, HotkeyCategory.allCases.filter { categories.contains($0) })
-        XCTAssertFalse(results.groups.isEmpty)
-        for group in results.groups {
+        XCTAssertFalse(groups.isEmpty)
+        for group in groups {
             XCTAssertFalse(group.bindings.isEmpty)
             XCTAssertTrue(group.bindings.allSatisfy { $0.category == group.category })
             let ids = Set(group.bindings.map(\.id))
@@ -116,22 +108,12 @@ final class HotkeySettingsDisplayModelTests: XCTestCase {
         let binding = HotkeyBinding(id: "custom-binding", command: .focusNavigation(.previous), trigger: .unassigned)
         XCTAssertEqual(searchIDs(binding.command.displayName, bindings: [binding]), [binding.id])
         XCTAssertEqual(searchIDs(binding.command.layoutCompatibility.rawValue, bindings: [binding]), [binding.id])
-        let results = HotkeySettingsDisplayModel.search(
-            "zzzznotfound",
-            bindings: HotkeyBindingRegistry.defaults(),
-            showsAdvancedHotkeys: false
-        )
-        XCTAssertTrue(results.groups.isEmpty)
-        XCTAssertEqual(results.hiddenAdvancedMatchCount, 0)
-    }
-
-    private func hiddenAdvancedMatchCount(_ query: String, bindings: [HotkeyBinding]) -> Int {
-        HotkeySettingsDisplayModel.search(query, bindings: bindings, showsAdvancedHotkeys: false)
-            .hiddenAdvancedMatchCount
+        let groups = HotkeySettingsDisplayModel.search("zzzznotfound", bindings: HotkeyBindingRegistry.defaults())
+        XCTAssertTrue(groups.isEmpty)
     }
 
     private func searchIDs(_ query: String, bindings: [HotkeyBinding]) -> [String] {
-        HotkeySettingsDisplayModel.search(query, bindings: bindings, showsAdvancedHotkeys: true).groups
+        HotkeySettingsDisplayModel.search(query, bindings: bindings)
             .flatMap(\.bindings).map(\.id)
     }
 }

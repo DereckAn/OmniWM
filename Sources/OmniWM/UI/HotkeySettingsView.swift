@@ -75,38 +75,18 @@ enum HotkeySettingsDisplayModel {
         }
     }
 
-    struct SearchResults {
-        let groups: [Group]
-        let hiddenAdvancedMatchCount: Int
-    }
-
-    static func search(
-        _ query: String,
-        bindings: [HotkeyBinding],
-        showsAdvancedHotkeys: Bool
-    ) -> SearchResults {
+    static func search(_ query: String, bindings: [HotkeyBinding]) -> [Group] {
         let normalizedQuery = ActionCatalog.normalizedSearchTerm(query)
         var bindingsByCategory: [HotkeyCategory: [HotkeyBinding]] = [:]
-        var hiddenAdvancedMatchCount = 0
         for binding in bindings {
-            let visibility = ActionCatalog.visibility(for: binding.id) ?? .normal
-            guard visibility != .unassignable else { continue }
-            let isHidden = visibility == .advanced && !showsAdvancedHotkeys
-            guard !isHidden || !normalizedQuery.isEmpty,
+            guard ActionCatalog.visibility(for: binding.id) != .unassignable,
                   matchesSearch(normalizedQuery, binding: binding)
             else { continue }
-            if isHidden {
-                hiddenAdvancedMatchCount += 1
-            } else {
-                bindingsByCategory[binding.category, default: []].append(binding)
-            }
+            bindingsByCategory[binding.category, default: []].append(binding)
         }
-        return SearchResults(
-            groups: HotkeyCategory.allCases.compactMap { category in
-                bindingsByCategory[category].map { Group(category: category, bindings: $0) }
-            },
-            hiddenAdvancedMatchCount: hiddenAdvancedMatchCount
-        )
+        return HotkeyCategory.allCases.compactMap { category in
+            bindingsByCategory[category].map { Group(category: category, bindings: $0) }
+        }
     }
 
     private static func matchesSearch(_ normalizedQuery: String, binding: HotkeyBinding) -> Bool {
@@ -165,18 +145,13 @@ struct HotkeySettingsView: View {
     @State private var conflictAlert: ConflictAlert?
     @State private var hyperTriggerError: String?
     @State private var searchText: String = ""
-    @State private var showsAdvancedHotkeys = false
     @State private var confirmsResetToDefaults = false
     @State private var inputMonitoringStatus = HotkeyInputMonitoringStatus(
         granted: HotkeyCenter.inputMonitoringAccessGranted()
     )
 
     var body: some View {
-        let results = HotkeySettingsDisplayModel.search(
-            searchText,
-            bindings: settings.hotkeyBindings,
-            showsAdvancedHotkeys: showsAdvancedHotkeys
-        )
+        let groups = HotkeySettingsDisplayModel.search(searchText, bindings: settings.hotkeyBindings)
         HotkeySettingsPage(
             subtitle: "Search commands, edit shortcuts, and review registration problems without leaving the settings window."
         ) {
@@ -267,27 +242,13 @@ struct HotkeySettingsView: View {
                     }
                 }
 
-                Toggle("Include Advanced Commands", isOn: $showsAdvancedHotkeys)
-                    .toggleStyle(.switch)
-                SettingsCaption("Includes advanced commands in the shortcut list and search results.")
-
-                let hiddenAdvancedMatchCount = results.hiddenAdvancedMatchCount
-                if hiddenAdvancedMatchCount > 0 {
-                    HStack(spacing: 12) {
-                        Text(hiddenAdvancedSearchMessage(for: hiddenAdvancedMatchCount))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Show Advanced Commands") {
-                            showsAdvancedHotkeys = true
-                        }
-                    }
-                } else if results.groups.isEmpty {
+                if groups.isEmpty {
                     Text("No matching hotkeys.")
                         .foregroundStyle(.secondary)
                 }
             }
 
-            ForEach(results.groups) { group in
+            ForEach(groups) { group in
                 Section(group.category.rawValue) {
                     ForEach(group.bindings) { binding in
                         HotkeyBindingRow(
@@ -345,13 +306,6 @@ struct HotkeySettingsView: View {
         } message: {
             Text("All hotkey bindings will be restored to OmniWM defaults.")
         }
-    }
-
-    private func hiddenAdvancedSearchMessage(for count: Int) -> String {
-        if count == 1 {
-            return "1 matching advanced command is hidden."
-        }
-        return "\(count) matching advanced commands are hidden."
     }
 
     private var isRecordingOrDrafting: Bool {
