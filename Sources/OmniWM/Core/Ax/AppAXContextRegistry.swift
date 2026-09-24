@@ -8,6 +8,7 @@ import Foundation
 
 @MainActor
 enum AppAXContextRegistry {
+    static let workerLifetime = AppAXWorkerLifetime()
     private(set) static var contexts: [pid_t: AppAXContext] = [:]
     private static var macOSHiddenPIDs: Set<pid_t> = []
     private(set) static var minimizedWindowTokens: Set<WindowToken> = []
@@ -61,17 +62,16 @@ enum AppAXContextRegistry {
     }
 
     @MainActor
-    static func shutdownAll() {
+    static func shutdownAll(completion: (@MainActor @Sendable () -> Void)? = nil) {
         appAXCallbackGenerationRegistry.advance()
         for (_, inFlight) in inFlightCreations {
             inFlight.task.cancel()
         }
         inFlightCreations.removeAll()
-        for (_, context) in contexts {
-            context.destroy()
-        }
+        for context in Array(contexts.values) { context.destroy() }
         macOSHiddenPIDs.removeAll()
         minimizedWindowTokens.removeAll()
+        if let completion { workerLifetime.whenFinished(completion) }
     }
 
     @MainActor

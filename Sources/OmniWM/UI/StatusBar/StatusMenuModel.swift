@@ -377,8 +377,8 @@ final class StatusMenuModel {
         controller?.openSponsorsWindow()
     }
 
-    func quit() {
-        NSApplication.shared.terminate(nil)
+    func quit(terminate: @escaping @MainActor () -> Void = { NSApplication.shared.terminate(nil) }) {
+        scheduleOnMainRunLoop(terminate)
     }
 
     func toggleTraceRecording(profile: TraceCaptureProfile = .problem) {

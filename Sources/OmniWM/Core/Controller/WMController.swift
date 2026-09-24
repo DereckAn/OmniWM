@@ -258,7 +258,7 @@ extension WMController {
         if enabled {
             serviceLifecycleManager.start()
         } else {
-            serviceLifecycleManager.stop()
+            serviceLifecycleManager.stopRestoringWindows()
         }
         reconcileEnabledAndHotkeysState()
     }
@@ -284,6 +284,7 @@ extension WMController {
 
     func reconcileEnabledAndHotkeysState() {
         isEnabled = desiredEnabled && accessibilityPermissionGranted
+            && !serviceLifecycleManager.isStoppingForUser && !serviceLifecycleManager.quitRequested
 
         let shouldEnableHotkeys = desiredHotkeysEnabled
             && isEnabled

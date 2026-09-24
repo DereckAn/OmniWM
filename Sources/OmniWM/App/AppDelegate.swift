@@ -72,6 +72,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var launchOverlayFinished = false
     private var launchPermissionsWindowController: LaunchPermissionsWindowController?
     private var didFinishBootstrap = false
+    private var terminationPending = false
 
     public func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -79,14 +80,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         bootstrapApplication()
     }
 
-    public func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
-        return .terminateNow
-    }
-
     public func applicationWillTerminate(_: Notification) {
         statusBarController?.cleanup()
         if let controller = AppDelegate.sharedBootstrap?.controller {
-            controller.serviceLifecycleManager.stop()
+            if !terminationPending { controller.serviceLifecycleManager.stop() }
             controller.workspaceManager.flushPersistedWindowRestoreCatalogNow()
         }
         AppDelegate.sharedBootstrap?.settings?.flushNow()
@@ -375,5 +372,28 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "OK")
         NSApplication.shared.activate(ignoringOtherApps: true)
         _ = alert.runModal()
+    }
+}
+
+extension AppDelegate {
+    public func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
+        guard let controller = AppDelegate.sharedBootstrap?.controller else { return .terminateNow }
+        return deferTermination(
+            stop: { controller.serviceLifecycleManager.stopRestoringWindows(forQuit: true, completion: $0) },
+            reply: {
+                controller.workspaceManager.flushPersistedWindowRestoreCatalogNow()
+                application.reply(toApplicationShouldTerminate: true)
+            }
+        )
+    }
+
+    func deferTermination(
+        stop: @escaping (@escaping @MainActor @Sendable () -> Void) -> Void,
+        reply: @escaping @MainActor @Sendable () -> Void
+    ) -> NSApplication.TerminateReply {
+        guard !terminationPending else { return .terminateLater }
+        terminationPending = true
+        Task { @MainActor in stop(reply) }
+        return .terminateLater
     }
 }

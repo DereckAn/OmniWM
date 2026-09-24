@@ -218,6 +218,11 @@ final class AppAXContext {
         )
     }
 
+    func prepareForStopRestoration() {
+        cancelRetryRaise()
+        frameDelivery.shutdown()
+    }
+
     func destroy() {
         cancelRetryRaise()
         if thread != nil {
